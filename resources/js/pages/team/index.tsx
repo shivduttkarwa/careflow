@@ -10,6 +10,7 @@ import {
     Users,
 } from 'lucide-react';
 import { useState } from 'react';
+import CareSelect from '@/components/care-select';
 import InputError from '@/components/input-error';
 
 type Member = {
@@ -31,6 +32,8 @@ const fieldClass =
     'h-12 w-full rounded-xl border border-[#d8e1db] bg-[#fbfcfb] px-3.5 text-sm outline-none transition placeholder:text-[#a8b1ad] focus:border-[#7ba695] focus:bg-white focus:ring-4 focus:ring-[#d8e9e1]/70';
 
 export default function TeamAccess({ members, patients }: Props) {
+    const [role, setRole] = useState('support_worker');
+
     return (
         <>
             <Head title="Team access" />
@@ -59,6 +62,7 @@ export default function TeamAccess({ members, patients }: Props) {
                             action="/team"
                             method="post"
                             resetOnSuccess
+                            onSuccess={() => setRole('support_worker')}
                             className="rounded-[26px] border border-[#dce4df] bg-white p-5 shadow-[0_10px_35px_rgba(32,55,46,0.045)] sm:p-6"
                         >
                             {({ processing, errors }) => (
@@ -89,10 +93,17 @@ export default function TeamAccess({ members, patients }: Props) {
 
                                         <label className="block">
                                             <span className="mb-2 block text-xs font-semibold text-[#40534b]">Role</span>
-                                            <select name="role" defaultValue="support_worker" className={fieldClass}>
-                                                <option value="support_worker">Support worker</option>
-                                                <option value="manager">Manager</option>
-                                            </select>
+                                            <CareSelect
+                                                size="lg"
+                                                name="role"
+                                                label="Role"
+                                                value={role}
+                                                onChange={setRole}
+                                                options={[
+                                                    { value: 'support_worker', label: 'Support worker', hint: 'Sees only assigned patients' },
+                                                    { value: 'manager', label: 'Manager', hint: 'Full access to every record' },
+                                                ]}
+                                            />
                                             <InputError message={errors.role} />
                                         </label>
 

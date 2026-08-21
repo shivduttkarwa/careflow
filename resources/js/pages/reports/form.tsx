@@ -16,6 +16,7 @@ import {
     UtensilsCrossed,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import CareSelect from '@/components/care-select';
 import { cn } from '@/lib/utils';
 
 type Patient = {
@@ -76,6 +77,22 @@ type Props = {
     shift: Shift | null;
 };
 
+const shiftTypes = [
+    { value: 'day', label: 'Day shift', hint: 'Morning through afternoon' },
+    { value: 'evening', label: 'Evening shift', hint: 'Afternoon through late evening' },
+    { value: 'night', label: 'Night shift', hint: 'Overnight cover' },
+];
+
+const bowelTextures = [
+    { value: 'Type 1 – separate hard lumps', label: 'Type 1 – separate hard lumps' },
+    { value: 'Type 2 – lumpy sausage', label: 'Type 2 – lumpy sausage' },
+    { value: 'Type 3 – cracked sausage', label: 'Type 3 – cracked sausage' },
+    { value: 'Type 4 – smooth and soft', label: 'Type 4 – smooth and soft' },
+    { value: 'Type 5 – soft blobs', label: 'Type 5 – soft blobs' },
+    { value: 'Type 6 – mushy', label: 'Type 6 – mushy' },
+    { value: 'Type 7 – watery', label: 'Type 7 – watery' },
+];
+
 const steps = [
     { label: 'Personal care', icon: ShowerHead },
     { label: 'Food & fluids', icon: UtensilsCrossed },
@@ -121,6 +138,17 @@ export default function ReportForm({ report, patients, selectedPatient, shift }:
         follow_up_required: report?.follow_up_required ?? false,
         handover_notes: report?.handover_notes ?? '',
     });
+
+    const activePatient = patients.find((patient) => patient.id === form.data.patient_id) ?? selectedPatient;
+    const activeShift = activePatient.id === selectedPatient.id ? shift : null;
+
+    const changePatient = (patientId: number) => {
+        form.setData((current) => ({
+            ...current,
+            patient_id: patientId,
+            shift_id: patientId === selectedPatient.id ? (report?.shift_id ?? shift?.id ?? null) : null,
+        }));
+    };
 
     const completion = useMemo(() => {
         const checks = [
@@ -174,26 +202,34 @@ return;
                 <section className="animate-rise-in animation-delay-1 mt-6 overflow-hidden rounded-[24px] border border-[#dce4df] bg-white shadow-[0_9px_30px_rgba(31,55,46,0.045)]">
                     <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
                         <div className="flex items-center gap-4">
-                            <div className="grid size-12 place-items-center rounded-[16px] text-sm font-bold text-white" style={{ backgroundColor: selectedPatient.accent_colour }}>
-                                {selectedPatient.initials}
+                            <div className="grid size-12 place-items-center rounded-[16px] text-sm font-bold text-white transition-colors" style={{ backgroundColor: activePatient.accent_colour }}>
+                                {activePatient.initials}
                             </div>
                             <div>
-                                <p className="text-base font-semibold tracking-[-0.025em]">{selectedPatient.full_name}</p>
-                                <p className="mt-1 text-xs text-[#7a8781]">{selectedPatient.home}{shift ? ` · ${shift.label}` : ''}</p>
+                                <p className="text-base font-semibold tracking-[-0.025em]">{activePatient.full_name}</p>
+                                <p className="mt-1 text-xs text-[#7a8781]">{activePatient.home}{activeShift ? ` · ${activeShift.label}` : ''}</p>
                             </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                             {patients.length > 1 && (
-                                <select value={form.data.patient_id} onChange={(event) => form.setData('patient_id', Number(event.target.value))} className="h-10 rounded-xl border border-[#dce4df] bg-[#fafbfa] px-3 text-xs font-medium outline-none focus:border-[#70a08f]">
-                                    {patients.map((patient) => <option key={patient.id} value={patient.id}>{patient.display_name}</option>)}
-                                </select>
+                                <CareSelect
+                                    size="sm"
+                                    label="Patient"
+                                    value={String(form.data.patient_id)}
+                                    onChange={(value) => changePatient(Number(value))}
+                                    options={patients.map((patient) => ({ value: String(patient.id), label: patient.display_name, hint: patient.home }))}
+                                    className="col-span-2 sm:w-[190px]"
+                                />
                             )}
-                            <input type="date" value={form.data.report_date} onChange={(event) => form.setData('report_date', event.target.value)} className="h-10 rounded-xl border border-[#dce4df] bg-[#fafbfa] px-3 text-xs font-medium outline-none focus:border-[#70a08f]" />
-                            <select value={form.data.shift_type} onChange={(event) => form.setData('shift_type', event.target.value as ReportData['shift_type'])} className="h-10 rounded-xl border border-[#dce4df] bg-[#fafbfa] px-3 text-xs font-medium capitalize outline-none focus:border-[#70a08f]">
-                                <option value="day">Day shift</option>
-                                <option value="evening">Evening shift</option>
-                                <option value="night">Night shift</option>
-                            </select>
+                            <input type="date" aria-label="Record date" value={form.data.report_date} onChange={(event) => form.setData('report_date', event.target.value)} className="h-10 rounded-xl border border-[#dce4df] bg-[#fafbfa] px-3 text-xs font-medium text-[#43554d] outline-none transition hover:border-[#bed0c7] hover:bg-white focus:border-[#7ba695] focus:bg-white focus:ring-4 focus:ring-[#dcebe4]/70" />
+                            <CareSelect
+                                size="sm"
+                                label="Shift type"
+                                value={form.data.shift_type}
+                                onChange={(value) => form.setData('shift_type', value as ReportData['shift_type'])}
+                                options={shiftTypes}
+                                className="sm:w-[150px]"
+                            />
                         </div>
                     </div>
                     <div className="h-1 bg-[#eef2ef]"><div className="h-full bg-[#3f7c67] transition-[width] duration-500" style={{ width: `${completion}%` }} /></div>
@@ -252,10 +288,14 @@ return;
                             <YesNo label="Bowel opened during this shift?" value={form.data.bowel_opened} onChange={(value) => form.setData('bowel_opened', value)} error={form.errors.bowel_opened} />
                             {form.data.bowel_opened && (
                                 <Field label="Bowel texture" hint="Bristol Stool Chart description">
-                                    <select value={form.data.bowel_texture} onChange={(event) => form.setData('bowel_texture', event.target.value)} className="h-12 w-full rounded-xl border border-[#dce3df] bg-[#fbfcfb] px-3 text-sm outline-none transition focus:border-[#79a896] focus:ring-4 focus:ring-[#dcebe4]/70">
-                                        <option value="">Select texture</option>
-                                        <option>Type 1 – separate hard lumps</option><option>Type 2 – lumpy sausage</option><option>Type 3 – cracked sausage</option><option>Type 4 – smooth and soft</option><option>Type 5 – soft blobs</option><option>Type 6 – mushy</option><option>Type 7 – watery</option>
-                                    </select>
+                                    <CareSelect
+                                        size="lg"
+                                        label="Bowel texture"
+                                        placeholder="Select texture"
+                                        value={form.data.bowel_texture}
+                                        onChange={(value) => form.setData('bowel_texture', value)}
+                                        options={bowelTextures}
+                                    />
                                     <ErrorText message={form.errors.bowel_texture} />
                                 </Field>
                             )}

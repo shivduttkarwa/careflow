@@ -10,6 +10,7 @@ import {
     X,
 } from 'lucide-react';
 import { useState } from 'react';
+import CareSelect from '@/components/care-select';
 
 type Patient = {
     id: number;
@@ -91,25 +92,17 @@ export default function PatientDirectory({ patients, homes, filters }: Props) {
                                 className="h-11 w-full rounded-xl border border-[#dce3df] bg-[#fafbfa] pr-3 pl-10 text-sm font-medium text-[#4d6057] outline-none focus:border-[#83aa9b]"
                             />
                         </div>
-                        <div className="relative">
-                            <House className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-[#87938d]" />
-                            <select
-                                value={home}
-                                aria-label="Filter by home"
-                                onChange={(event) => {
-                                    setHome(event.target.value);
-                                    apply({ home: event.target.value });
-                                }}
-                                className="h-11 w-full appearance-none rounded-xl border border-[#dce3df] bg-[#fafbfa] pr-8 pl-10 text-xs font-medium text-[#4d6057] outline-none focus:border-[#83aa9b]"
-                            >
-                                <option value="">All homes</option>
-                                {homes.map((option) => (
-                                    <option key={option.id} value={option.id}>
-                                        {option.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        <CareSelect
+                            icon={House}
+                            label="Filter by home"
+                            placeholder="All homes"
+                            value={home}
+                            onChange={(value) => {
+                                setHome(value);
+                                apply({ home: value });
+                            }}
+                            options={[{ value: '', label: 'All homes' }, ...homes.map((option) => ({ value: String(option.id), label: option.name }))]}
+                        />
                         <div className="flex gap-2">
                             <button
                                 type="submit"

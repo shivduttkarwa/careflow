@@ -15,6 +15,7 @@ import {
     X,
 } from 'lucide-react';
 import { useState } from 'react';
+import CareSelect from '@/components/care-select';
 
 type Report = {
     id: number;
@@ -159,9 +160,18 @@ export default function ReportHistory({ reports, patients, homes, workers, filte
 }
 
 function FilterSelect({ icon: Icon, value, onChange, placeholder, options }: { icon: typeof UserRound; value: string; onChange: (value: string) => void; placeholder: string; options: Option[] }) {
-    return <div className="relative"><Icon className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-[#87938d]" /><select value={value} onChange={(event) => onChange(event.target.value)} className="h-11 w-full appearance-none rounded-xl border border-[#dce3df] bg-[#fafbfa] pr-8 pl-10 text-xs font-medium text-[#4d6057] outline-none focus:border-[#83aa9b]"><option value="">{placeholder}</option>{options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select></div>;
+    return (
+        <CareSelect
+            icon={Icon}
+            label={placeholder}
+            placeholder={placeholder}
+            value={value}
+            onChange={onChange}
+            options={[{ value: '', label: placeholder }, ...options.map((option) => ({ value: String(option.id), label: option.name }))]}
+        />
+    );
 }
 
 function DateFilter({ value, onChange, label }: { value: string; onChange: (value: string) => void; label: string }) {
-    return <div className="relative"><CalendarDays className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-[#87938d]" /><input type="date" aria-label={label} value={value} onChange={(event) => onChange(event.target.value)} className="h-11 w-full rounded-xl border border-[#dce3df] bg-[#fafbfa] pr-3 pl-10 text-xs font-medium text-[#4d6057] outline-none focus:border-[#83aa9b]" /></div>;
+    return <div className="relative"><CalendarDays className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-[#87938d]" /><input type="date" aria-label={label} value={value} onChange={(event) => onChange(event.target.value)} className="h-11 w-full rounded-xl border border-[#dce3df] bg-[#fafbfa] pr-3 pl-10 text-xs font-medium text-[#4d6057] outline-none transition hover:border-[#bed0c7] hover:bg-white focus:border-[#7ba695] focus:bg-white focus:ring-4 focus:ring-[#dcebe4]/70" /></div>;
 }
