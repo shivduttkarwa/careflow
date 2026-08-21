@@ -1,0 +1,16 @@
+{
+    "name": "CareFlow Support Portal",
+    "short_name": "CareFlow",
+    "description": "Secure daily care records and shift handovers.",
+    "start_url": "/dashboard",
+    "display": "standalone",
+    "background_color": "#f4f6f3",
+    "theme_color": "#244f43",
+    "icons": [
+        {
+            "src": "/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png"
+        }
+    ]
+}
