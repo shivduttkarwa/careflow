@@ -3,16 +3,25 @@ import {
     ArrowLeft,
     ArrowRight,
     Building2,
-    CalendarDays,
     HeartHandshake,
     LoaderCircle,
     ShieldCheck,
     Sparkles,
     UserRoundPlus,
 } from 'lucide-react';
+import { useState } from 'react';
+import CareDate from '@/components/care-date';
 import InputError from '@/components/input-error';
 
+const todayKey = () => {
+    const now = new Date();
+
+    return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+};
+
 export default function CreatePatient() {
+    const [dateOfBirth, setDateOfBirth] = useState('');
+
     return (
         <>
             <Head title="Add patient" />
@@ -56,10 +65,16 @@ export default function CreatePatient() {
 
                                     <label className="block">
                                         <span className="mb-2 block text-xs font-semibold text-[#40534b]">Date of birth <span className="font-normal text-[#89958f]">Optional</span></span>
-                                        <div className="relative">
-                                            <CalendarDays className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-[#89958f]" />
-                                            <input type="date" name="date_of_birth" className="h-12 w-full rounded-xl border border-[#d8e1db] bg-[#fbfcfb] pr-3 pl-10 text-sm text-[#52635c] outline-none transition focus:border-[#7ba695] focus:bg-white focus:ring-4 focus:ring-[#d8e9e1]/70" />
-                                        </div>
+                                        <CareDate
+                                            size="lg"
+                                            name="date_of_birth"
+                                            label="Date of birth"
+                                            placeholder="Select date of birth"
+                                            value={dateOfBirth}
+                                            onChange={setDateOfBirth}
+                                            max={todayKey()}
+                                            clearable
+                                        />
                                         <InputError message={errors.date_of_birth} />
                                     </label>
 

@@ -16,6 +16,7 @@ import {
     UtensilsCrossed,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import CareDate from '@/components/care-date';
 import CareSelect from '@/components/care-select';
 import { cn } from '@/lib/utils';
 
@@ -221,7 +222,14 @@ return;
                                     className="col-span-2 sm:w-[190px]"
                                 />
                             )}
-                            <input type="date" aria-label="Record date" value={form.data.report_date} onChange={(event) => form.setData('report_date', event.target.value)} className="h-10 rounded-xl border border-[#dce4df] bg-[#fafbfa] px-3 text-xs font-medium text-[#43554d] outline-none transition hover:border-[#bed0c7] hover:bg-white focus:border-[#7ba695] focus:bg-white focus:ring-4 focus:ring-[#dcebe4]/70" />
+                            <CareDate
+                                size="sm"
+                                label="Record date"
+                                value={form.data.report_date}
+                                onChange={(value) => form.setData('report_date', value)}
+                                max={today()}
+                                className="sm:w-[150px]"
+                            />
                             <CareSelect
                                 size="sm"
                                 label="Shift type"

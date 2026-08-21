@@ -15,6 +15,7 @@ import {
     X,
 } from 'lucide-react';
 import { useState } from 'react';
+import CareDate from '@/components/care-date';
 import CareSelect from '@/components/care-select';
 
 type Report = {
@@ -96,8 +97,8 @@ export default function ReportHistory({ reports, patients, homes, workers, filte
                         <FilterSelect icon={House} value={home} onChange={setHome} placeholder="All homes" options={homes} />
                         <FilterSelect icon={UserRound} value={patient} onChange={setPatient} placeholder="All patients" options={patients} />
                         <FilterSelect icon={UserRound} value={worker} onChange={setWorker} placeholder="All workers" options={workers} />
-                        <DateFilter value={from} onChange={setFrom} label="From date" />
-                        <DateFilter value={to} onChange={setTo} label="To date" />
+                        <DateFilter value={from} onChange={setFrom} label="From date" placeholder="From" max={to} />
+                        <DateFilter value={to} onChange={setTo} label="To date" placeholder="To" min={from} />
                         <button type="button" onClick={applyFilters} className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#e8f0ec] px-5 text-xs font-semibold text-[#2f6250] transition hover:bg-[#dceae3]"><Search className="size-4" /> Apply</button>
                     </div>
                 </section>
@@ -172,6 +173,6 @@ function FilterSelect({ icon: Icon, value, onChange, placeholder, options }: { i
     );
 }
 
-function DateFilter({ value, onChange, label }: { value: string; onChange: (value: string) => void; label: string }) {
-    return <div className="relative"><CalendarDays className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-[#87938d]" /><input type="date" aria-label={label} value={value} onChange={(event) => onChange(event.target.value)} className="h-11 w-full rounded-xl border border-[#dce3df] bg-[#fafbfa] pr-3 pl-10 text-xs font-medium text-[#4d6057] outline-none transition hover:border-[#bed0c7] hover:bg-white focus:border-[#7ba695] focus:bg-white focus:ring-4 focus:ring-[#dcebe4]/70" /></div>;
+function DateFilter({ value, onChange, label, placeholder, min, max }: { value: string; onChange: (value: string) => void; label: string; placeholder: string; min?: string; max?: string }) {
+    return <CareDate value={value} onChange={onChange} label={label} placeholder={placeholder} min={min} max={max} clearable />;
 }

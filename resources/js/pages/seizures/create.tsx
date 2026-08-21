@@ -9,6 +9,7 @@ import {
     Info,
     ShieldCheck,
 } from 'lucide-react';
+import CareDate from '@/components/care-date';
 import { cn } from '@/lib/utils';
 
 type Patient = {
@@ -91,7 +92,28 @@ export default function SeizureCreate({ patient, reportId, observerName }: { pat
                 <section className="animate-rise-in animation-delay-1 mt-6 rounded-[24px] border border-[#e1dddc] bg-white p-5 shadow-[0_10px_35px_rgba(56,37,32,0.045)] sm:p-7">
                     <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-4"><div className="grid size-12 place-items-center rounded-[16px] text-sm font-bold text-white" style={{ backgroundColor: patient.accent_colour }}>{patient.initials}</div><div><p className="font-semibold">{patient.full_name}</p><p className="mt-1 text-xs text-[#7d8984]">{patient.home}</p></div></div>
-                        <label className="block"><span className="mb-1.5 block text-[10px] font-bold tracking-[0.06em] text-[#89948f] uppercase">Event started</span><input type="datetime-local" value={form.data.occurred_at} onChange={(event) => form.setData('occurred_at', event.target.value)} className="h-11 rounded-xl border border-[#dce3df] bg-[#fafbfa] px-3 text-xs font-medium outline-none focus:border-[#80a999]" /></label>
+                        <div>
+                            <span className="mb-1.5 block text-[10px] font-bold tracking-[0.06em] text-[#89948f] uppercase">Event started</span>
+                            <div className="flex gap-2">
+                                <CareDate
+                                    label="Event date"
+                                    value={form.data.occurred_at.slice(0, 10)}
+                                    onChange={(value) => form.setData('occurred_at', value + 'T' + (form.data.occurred_at.slice(11, 16) || '00:00'))}
+                                    max={localDateTime().slice(0, 10)}
+                                    className="w-[148px]"
+                                />
+                                <div className="relative">
+                                    <Clock3 className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-[#87938d]" />
+                                    <input
+                                        type="time"
+                                        aria-label="Event time"
+                                        value={form.data.occurred_at.slice(11, 16)}
+                                        onChange={(event) => form.setData('occurred_at', (form.data.occurred_at.slice(0, 10) || localDateTime().slice(0, 10)) + 'T' + (event.target.value || '00:00'))}
+                                        className="h-11 w-[118px] rounded-xl border border-[#dce3df] bg-[#fafbfa] pr-2 pl-9 text-xs font-medium text-[#43554d] outline-none transition hover:border-[#bed0c7] hover:bg-white focus:border-[#7ba695] focus:bg-white focus:ring-4 focus:ring-[#dcebe4]/70"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
