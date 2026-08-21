@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\AuditEvent;
+use App\Models\Home;
 use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -43,15 +44,19 @@ class TeamController extends Controller
                 'submitted_reports_count' => $member->submitted_reports_count,
                 'last_report_date' => $member->last_report_date,
             ]),
-            'patients' => Patient::query()
-                ->with('home')
-                ->where('status', 'active')
-                ->orderBy('first_name')
+            'facilities' => Home::query()
+                ->whereHas('patients', fn ($query) => $query->where('status', 'active'))
+                ->with(['patients' => fn ($query) => $query->where('status', 'active')->orderBy('first_name')])
+                ->orderBy('name')
                 ->get()
-                ->map(fn (Patient $patient) => [
-                    'id' => $patient->id,
-                    'name' => $patient->display_name,
-                    'home' => $patient->home->name,
+                ->map(fn (Home $home) => [
+                    'id' => $home->id,
+                    'name' => $home->name,
+                    'address' => $home->address,
+                    'patients' => $home->patients->map(fn (Patient $patient) => [
+                        'id' => $patient->id,
+                        'name' => $patient->display_name,
+                    ])->values(),
                 ]),
         ]);
     }

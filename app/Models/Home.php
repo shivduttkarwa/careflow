@@ -9,6 +9,9 @@ class Home extends Model
 {
     protected $fillable = ['name', 'address', 'timezone'];
 
+    /**
+     * @return HasMany<Patient, $this>
+     */
     public function patients(): HasMany
     {
         return $this->hasMany(Patient::class);

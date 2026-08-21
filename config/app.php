@@ -43,6 +43,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Demo Logins
+    |--------------------------------------------------------------------------
+    |
+    | Lists the seeded accounts on the sign in page with their shared password
+    | so the MVP can be explored as any role. Must stay off in production.
+    |
+    */
+
+    'demo_logins' => (bool) env('APP_DEMO_LOGINS', env('APP_ENV', 'production') !== 'production'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application URL
     |--------------------------------------------------------------------------
     |

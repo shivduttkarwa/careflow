@@ -1,15 +1,17 @@
 import { Form, Head, router } from '@inertiajs/react';
 import {
+    Building2,
     CheckCircle2,
     LoaderCircle,
     Lock,
     Mail,
+    MapPin,
     ShieldCheck,
     UserRound,
     UserRoundPlus,
     Users,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import CareSelect from '@/components/care-select';
 import InputError from '@/components/input-error';
 
@@ -24,15 +26,33 @@ type Member = {
     last_report_date: string | null;
 };
 
-type PatientOption = { id: number; name: string; home: string };
+type Facility = {
+    id: number;
+    name: string;
+    address: string | null;
+    patients: { id: number; name: string }[];
+};
 
-type Props = { members: Member[]; patients: PatientOption[] };
+type Props = { members: Member[]; facilities: Facility[] };
 
 const fieldClass =
     'h-12 w-full rounded-xl border border-[#d8e1db] bg-[#fbfcfb] px-3.5 text-sm outline-none transition placeholder:text-[#a8b1ad] focus:border-[#7ba695] focus:bg-white focus:ring-4 focus:ring-[#d8e9e1]/70';
 
-export default function TeamAccess({ members, patients }: Props) {
+type Coverage = 'none' | 'partial' | 'all';
+
+function coverageOf(facility: Facility, selected: number[]): Coverage {
+    const covered = facility.patients.filter((patient) => selected.includes(patient.id)).length;
+
+    if (covered === 0) {
+        return 'none';
+    }
+
+    return covered === facility.patients.length ? 'all' : 'partial';
+}
+
+export default function TeamAccess({ members, facilities }: Props) {
     const [role, setRole] = useState('support_worker');
+    const [newMemberPatients, setNewMemberPatients] = useState<number[]>([]);
 
     return (
         <>
@@ -45,15 +65,15 @@ export default function TeamAccess({ members, patients }: Props) {
                     </div>
                     <h1 className="text-[30px] font-semibold tracking-[-0.045em] sm:text-[36px]">Team access</h1>
                     <p className="mt-2 max-w-2xl text-sm leading-6 text-[#718079]">
-                        Accounts are created here — staff cannot sign themselves up. Each support worker only sees the
-                        patients you give them access to.
+                        Accounts are created here — staff cannot sign themselves up. Give a support worker a whole
+                        facility, or pick individual patients within one.
                     </p>
                 </header>
 
                 <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
                     <section className="animate-rise-in animation-delay-1 space-y-4">
                         {members.map((member) => (
-                            <MemberCard key={member.id} member={member} patients={patients} />
+                            <MemberCard key={member.id} member={member} facilities={facilities} />
                         ))}
                     </section>
 
@@ -62,7 +82,10 @@ export default function TeamAccess({ members, patients }: Props) {
                             action="/team"
                             method="post"
                             resetOnSuccess
-                            onSuccess={() => setRole('support_worker')}
+                            onSuccess={() => {
+                                setRole('support_worker');
+                                setNewMemberPatients([]);
+                            }}
                             className="rounded-[26px] border border-[#dce4df] bg-white p-5 shadow-[0_10px_35px_rgba(32,55,46,0.045)] sm:p-6"
                         >
                             {({ processing, errors }) => (
@@ -100,8 +123,8 @@ export default function TeamAccess({ members, patients }: Props) {
                                                 value={role}
                                                 onChange={setRole}
                                                 options={[
-                                                    { value: 'support_worker', label: 'Support worker', hint: 'Sees only assigned patients' },
-                                                    { value: 'manager', label: 'Manager', hint: 'Full access to every record' },
+                                                    { value: 'support_worker', label: 'Support worker', hint: 'Sees only assigned facilities' },
+                                                    { value: 'manager', label: 'Manager', hint: 'Full access to every facility' },
                                                 ]}
                                             />
                                             <InputError message={errors.role} />
@@ -121,18 +144,20 @@ export default function TeamAccess({ members, patients }: Props) {
                                             <input type="password" name="password_confirmation" required autoComplete="new-password" className={fieldClass} />
                                         </label>
 
-                                        {patients.length > 0 && (
+                                        {role === 'support_worker' && facilities.length > 0 && (
                                             <fieldset>
-                                                <legend className="mb-2 text-xs font-semibold text-[#40534b]">Patient access</legend>
-                                                <div className="max-h-52 space-y-1.5 overflow-y-auto rounded-xl border border-[#e2e8e4] bg-[#fbfcfb] p-2.5">
-                                                    {patients.map((patient) => (
-                                                        <label key={patient.id} className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-xs transition hover:bg-white">
-                                                            <input type="checkbox" name="patients[]" value={patient.id} className="size-4 accent-[#2f6250]" />
-                                                            <span className="font-medium text-[#41564d]">{patient.name}</span>
-                                                            <span className="ml-auto text-[10px] text-[#8b9791]">{patient.home}</span>
-                                                        </label>
-                                                    ))}
+                                                <legend className="mb-2 text-xs font-semibold text-[#40534b]">Facility access</legend>
+                                                <div className="max-h-72 overflow-y-auto rounded-xl border border-[#e2e8e4] bg-[#fbfcfb] p-2.5">
+                                                    <FacilityPicker
+                                                        facilities={facilities}
+                                                        selected={newMemberPatients}
+                                                        onChange={setNewMemberPatients}
+                                                        compact
+                                                    />
                                                 </div>
+                                                {newMemberPatients.map((id) => (
+                                                    <input key={id} type="hidden" name="patients[]" value={id} />
+                                                ))}
                                             </fieldset>
                                         )}
                                     </div>
@@ -165,7 +190,113 @@ export default function TeamAccess({ members, patients }: Props) {
     );
 }
 
-function MemberCard({ member, patients }: { member: Member; patients: PatientOption[] }) {
+function FacilityPicker({
+    facilities,
+    selected,
+    onChange,
+    compact = false,
+}: {
+    facilities: Facility[];
+    selected: number[];
+    onChange: (next: number[]) => void;
+    compact?: boolean;
+}) {
+    const togglePatient = (id: number) =>
+        onChange(selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id]);
+
+    const toggleFacility = (facility: Facility) => {
+        const ids = facility.patients.map((patient) => patient.id);
+
+        onChange(
+            coverageOf(facility, selected) === 'all'
+                ? selected.filter((id) => !ids.includes(id))
+                : [...selected.filter((id) => !ids.includes(id)), ...ids],
+        );
+    };
+
+    return (
+        <div className={compact ? 'space-y-2.5' : 'space-y-3'}>
+            {facilities.map((facility) => {
+                const coverage = coverageOf(facility, selected);
+
+                return (
+                    <div
+                        key={facility.id}
+                        className={`rounded-xl border transition ${
+                            coverage === 'none' ? 'border-[#e4e9e6] bg-white' : 'border-[#bcd3c9] bg-[#f4faf7]'
+                        }`}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => toggleFacility(facility)}
+                            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left"
+                        >
+                            <span
+                                className={`grid size-7 shrink-0 place-items-center rounded-lg transition ${
+                                    coverage === 'all'
+                                        ? 'bg-[#285b4c] text-white'
+                                        : coverage === 'partial'
+                                          ? 'bg-[#d5e7de] text-[#2f6250]'
+                                          : 'bg-[#f0f3f1] text-[#93a09a]'
+                                }`}
+                            >
+                                <Building2 className="size-3.5" />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span className="block truncate text-xs font-semibold text-[#31463f]">{facility.name}</span>
+                                {!compact && facility.address && (
+                                    <span className="mt-0.5 flex items-center gap-1 text-[10px] text-[#8b9791]">
+                                        <MapPin className="size-2.5 shrink-0" />
+                                        <span className="truncate">{facility.address}</span>
+                                    </span>
+                                )}
+                            </span>
+                            <span
+                                className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-[0.05em] uppercase ${
+                                    coverage === 'all'
+                                        ? 'bg-[#dcece4] text-[#2f6250]'
+                                        : coverage === 'partial'
+                                          ? 'bg-[#f2f0e3] text-[#867c52]'
+                                          : 'bg-[#f0f3f1] text-[#8b9791]'
+                                }`}
+                            >
+                                {coverage === 'all'
+                                    ? 'Full facility'
+                                    : coverage === 'partial'
+                                      ? `${facility.patients.filter((patient) => selected.includes(patient.id)).length}/${facility.patients.length}`
+                                      : 'No access'}
+                            </span>
+                        </button>
+
+                        <div className="flex flex-wrap gap-1.5 border-t border-[#e8eeeb] px-3 py-2.5">
+                            {facility.patients.map((patient) => {
+                                const active = selected.includes(patient.id);
+
+                                return (
+                                    <button
+                                        key={patient.id}
+                                        type="button"
+                                        onClick={() => togglePatient(patient.id)}
+                                        className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                                            active
+                                                ? 'border-[#a9c4b9] bg-white text-[#2f6250]'
+                                                : 'border-[#e0e6e2] bg-white text-[#8b9791] hover:border-[#c3d2cb]'
+                                        }`}
+                                    >
+                                        {active && <CheckCircle2 className="size-3" />}
+                                        {patient.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function MemberCard({ member, facilities }: { member: Member; facilities: Facility[] }) {
     const [selected, setSelected] = useState<number[]>(member.patient_ids);
     const [saving, setSaving] = useState(false);
 
@@ -173,8 +304,13 @@ function MemberCard({ member, patients }: { member: Member; patients: PatientOpt
         selected.length !== member.patient_ids.length ||
         selected.some((id) => !member.patient_ids.includes(id));
 
-    const toggle = (id: number) =>
-        setSelected((current) => (current.includes(id) ? current.filter((value) => value !== id) : [...current, id]));
+    const savedFacilities = useMemo(
+        () =>
+            facilities
+                .map((facility) => ({ facility, coverage: coverageOf(facility, member.patient_ids) }))
+                .filter(({ coverage }) => coverage !== 'none'),
+        [facilities, member.patient_ids],
+    );
 
     const save = () => {
         setSaving(true);
@@ -213,43 +349,32 @@ function MemberCard({ member, patients }: { member: Member; patients: PatientOpt
                 </span>
                 <span>·</span>
                 <span>{member.last_report_date ? `Last note ${member.last_report_date}` : 'No notes yet'}</span>
+                {!member.is_manager && (
+                    <>
+                        <span>·</span>
+                        <span>
+                            {savedFacilities.length === 0
+                                ? 'No facility'
+                                : `${savedFacilities.length} of ${facilities.length} facilities`}
+                        </span>
+                    </>
+                )}
             </div>
 
             {member.is_manager ? (
                 <p className="mt-4 flex items-center gap-2 rounded-xl bg-[#f4f7f5] px-3.5 py-3 text-[11px] text-[#67766f]">
-                    <Users className="size-3.5 shrink-0 text-[#7e8f87]" /> Managers can see every patient across all homes.
+                    <Users className="size-3.5 shrink-0 text-[#7e8f87]" /> Managers can see every patient across all facilities.
                 </p>
             ) : (
                 <div className="mt-4 border-t border-[#eef1ef] pt-4">
                     <div className="mb-2.5 flex items-center gap-2 text-[10px] font-bold tracking-[0.08em] text-[#77867f] uppercase">
-                        <UserRound className="size-3.5 text-[#688078]" /> Patient access
+                        <UserRound className="size-3.5 text-[#688078]" /> Facility &amp; patient access
                     </div>
 
-                    {patients.length === 0 ? (
+                    {facilities.length === 0 ? (
                         <p className="text-xs text-[#8b9791]">Add a patient before granting access.</p>
                     ) : (
-                        <div className="flex flex-wrap gap-2">
-                            {patients.map((patient) => {
-                                const active = selected.includes(patient.id);
-
-                                return (
-                                    <button
-                                        key={patient.id}
-                                        type="button"
-                                        onClick={() => toggle(patient.id)}
-                                        className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
-                                            active
-                                                ? 'border-[#a9c4b9] bg-[#e8f0ec] text-[#2f6250]'
-                                                : 'border-[#e0e6e2] bg-white text-[#8b9791] hover:border-[#c3d2cb]'
-                                        }`}
-                                    >
-                                        {active && <CheckCircle2 className="size-3.5" />}
-                                        {patient.name}
-                                        <span className="font-normal opacity-70">{patient.home}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                        <FacilityPicker facilities={facilities} selected={selected} onChange={setSelected} />
                     )}
 
                     {dirty && (

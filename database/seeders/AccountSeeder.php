@@ -12,6 +12,8 @@ class AccountSeeder extends Seeder
 
     public const WORKER_EMAIL = 'worker@careflow.test';
 
+    public const DEMO_PASSWORD = 'password';
+
     /**
      * @var list<array{string, string, string}>
      */
@@ -38,7 +40,7 @@ class AccountSeeder extends Seeder
                 'name' => $name,
                 'role' => $role,
                 'email_verified_at' => now(),
-                'password' => Hash::make('password'),
+                'password' => Hash::make(self::DEMO_PASSWORD),
             ])->save();
         }
     }
