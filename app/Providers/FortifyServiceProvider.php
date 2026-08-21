@@ -87,7 +87,7 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function demoAccounts(): array
     {
-        if (! config('app.demo_logins') || app()->isProduction()) {
+        if (! config('app.demo_logins')) {
             return [];
         }
 

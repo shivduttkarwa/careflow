@@ -52,6 +52,20 @@ class AuthenticationTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->has('demoAccounts', 0));
     }
 
+    public function test_the_flag_alone_decides_demo_accounts_in_production()
+    {
+        $this->seed(AccountSeeder::class);
+        $this->app->detectEnvironment(fn () => 'production');
+
+        config(['app.demo_logins' => false]);
+        $this->get(route('login'))
+            ->assertInertia(fn (Assert $page) => $page->has('demoAccounts', 0));
+
+        config(['app.demo_logins' => true]);
+        $this->get(route('login'))
+            ->assertInertia(fn (Assert $page) => $page->has('demoAccounts', count(AccountSeeder::ACCOUNTS)));
+    }
+
     public function test_users_can_authenticate_using_the_login_screen()
     {
         $user = User::factory()->create();

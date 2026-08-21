@@ -47,7 +47,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | Lists the seeded accounts on the sign in page with their shared password
-    | so the MVP can be explored as any role. Must stay off in production.
+    | so the MVP can be explored as any role. Off by default in production —
+    | only turn it on for a demo host that holds no real care records.
     |
     */
 
