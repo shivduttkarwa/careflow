@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Patient extends Model
+class Participant extends Model
 {
     use SoftDeletes;
 
@@ -33,7 +33,7 @@ class Patient extends Model
 
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'patient_user_assignments')
+        return $this->belongsToMany(User::class, 'participant_user_assignments')
             ->withPivot(['starts_on', 'ends_on'])
             ->withTimestamps();
     }
@@ -54,10 +54,10 @@ class Patient extends Model
     }
 
     /**
-     * Managers see every patient. Support workers see only the patients whose
+     * Managers see every participant. Support workers see only the participants whose
      * assignment is open today.
      *
-     * @param  Builder<Patient>  $query
+     * @param  Builder<Participant>  $query
      */
     #[Scope]
     protected function visibleTo(Builder $query, User $user): void
@@ -75,10 +75,10 @@ class Patient extends Model
     public static function constrainToOpenAssignment(Builder $query, User $user): void
     {
         $query->where('users.id', $user->id)
-            ->where('patient_user_assignments.starts_on', '<=', today())
+            ->where('participant_user_assignments.starts_on', '<=', today())
             ->where(function ($dates) {
-                $dates->whereNull('patient_user_assignments.ends_on')
-                    ->orWhere('patient_user_assignments.ends_on', '>=', today());
+                $dates->whereNull('participant_user_assignments.ends_on')
+                    ->orWhere('participant_user_assignments.ends_on', '>=', today());
             });
     }
 

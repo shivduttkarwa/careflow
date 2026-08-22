@@ -16,7 +16,7 @@ class UserPolicy
         return $user->isManager();
     }
 
-    public function assignPatients(User $user, User $member): bool
+    public function assignParticipants(User $user, User $member): bool
     {
         return $user->isManager() && ! $member->isManager();
     }

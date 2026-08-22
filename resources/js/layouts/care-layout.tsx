@@ -1,33 +1,41 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     Bell,
-    ChevronRight,
-    ClipboardPlus,
+    CircleHelp,
     FileClock,
-    HeartHandshake,
-    Home,
+    LayoutGrid,
     LogOut,
+    Plus,
     Settings,
     Users,
     UsersRound,
 } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
+import { BrandLockup } from '@/components/brand';
 import { cn } from '@/lib/utils';
 
 const navigation = [
-    { label: 'Overview', href: '/dashboard', icon: Home },
-    { label: 'Patients', href: '/patients', icon: UsersRound },
-    { label: 'Daily note', href: '/reports/create', icon: ClipboardPlus },
-    { label: 'History', href: '/reports', icon: FileClock },
+    { label: 'Overview', href: '/dashboard', icon: LayoutGrid },
+    { label: 'Participants', href: '/participants', icon: UsersRound },
+    { label: 'Care records', href: '/reports', icon: FileClock },
 ];
 
-const managerNavigation = [{ label: 'Team access', href: '/team', icon: Users }];
+const managerNavigation = [
+    { label: 'Team access', href: '/team', icon: Users },
+];
+
+const mobileNavigation = [
+    ...navigation,
+    { label: 'Settings', href: '/settings/profile', icon: Settings },
+];
 
 export default function CareLayout({ children }: PropsWithChildren) {
     const page = usePage();
     const user = page.props.auth.user;
     const isManager = user.role === 'manager' || user.role === 'administrator';
-    const sidebarNavigation = isManager ? [...navigation, ...managerNavigation] : navigation;
+    const sidebarNavigation = isManager
+        ? [...navigation, ...managerNavigation]
+        : navigation;
     const initials = user.name
         .split(' ')
         .map((part) => part[0])
@@ -36,31 +44,80 @@ export default function CareLayout({ children }: PropsWithChildren) {
         .toUpperCase();
 
     const path = page.url.split('?')[0];
-    const activeHref = sidebarNavigation
-        .map((item) => item.href)
+    const allHrefs = [...sidebarNavigation, ...mobileNavigation].map(
+        (item) => item.href,
+    );
+    const activeHref = allHrefs
         .filter((href) => path === href || path.startsWith(`${href}/`))
         .sort((a, b) => b.length - a.length)[0];
 
     const isActive = (href: string) => href === activeHref;
 
     return (
-        <div className="min-h-screen bg-[#f4f6f3] text-[#17231f]">
-            <aside className="fixed inset-y-0 left-0 z-40 hidden w-[248px] border-r border-[#dfe5df] bg-[#fbfcfa] lg:flex lg:flex-col">
-                <div className="flex h-20 items-center gap-3 px-6">
-                    <div className="grid size-10 place-items-center rounded-[14px] bg-[#244f43] text-white shadow-[0_8px_20px_rgba(36,79,67,0.16)]">
-                        <HeartHandshake className="size-5" strokeWidth={2} />
+        <div className="min-h-screen bg-surface text-ink-900">
+            <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-line bg-white/95 px-4 backdrop-blur-xl lg:px-6">
+                <Link
+                    href="/dashboard"
+                    className="flex shrink-0 items-center lg:w-[248px]"
+                >
+                    <BrandLockup compact className="lg:hidden" />
+                    <BrandLockup className="hidden lg:flex" />
+                </Link>
+
+                <div className="ml-auto flex items-center gap-1.5">
+                    <button
+                        type="button"
+                        className="relative grid size-10 place-items-center rounded-lg text-ink-500 transition hover:bg-ink-50 hover:text-brand-700"
+                        aria-label="Notifications"
+                    >
+                        <Bell className="size-[19px]" />
+                        <span className="absolute top-2.5 right-2.5 size-2 rounded-full border-2 border-white bg-accent-600" />
+                    </button>
+                    <Link
+                        href="/settings/profile"
+                        className="hidden size-10 place-items-center rounded-lg text-ink-500 transition hover:bg-ink-50 hover:text-brand-700 sm:grid"
+                        aria-label="Help and account settings"
+                    >
+                        <CircleHelp className="size-[19px]" />
+                    </Link>
+                    <Link
+                        href="/settings/profile"
+                        className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-100 text-[11px] font-bold text-brand-800 transition hover:bg-brand-200"
+                        aria-label="Open account settings"
+                    >
+                        {initials}
+                    </Link>
+                </div>
+            </header>
+
+            <aside className="fixed inset-y-16 left-0 z-30 hidden w-[248px] flex-col border-r border-line bg-white lg:flex">
+                <div className="p-4">
+                    <div className="flex items-center gap-3 rounded-xl bg-brand-50 p-3">
+                        <div className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-700 text-xs font-bold text-white">
+                            {initials}
+                        </div>
+                        <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-ink-900">
+                                {user.name}
+                            </p>
+                            <p className="truncate text-[11px] font-medium text-ink-400 capitalize">
+                                {String(user.role ?? 'support_worker').replace(
+                                    '_',
+                                    ' ',
+                                )}
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-[15px] font-semibold tracking-[-0.02em]">
-                            CareFlow
-                        </p>
-                        <p className="text-[11px] font-medium tracking-[0.08em] text-[#7a8882] uppercase">
-                            Support portal
-                        </p>
-                    </div>
+
+                    <Link
+                        href="/reports/create"
+                        className="btn-primary mt-4 h-11 w-full text-[13px]"
+                    >
+                        <Plus className="size-4" /> New care record
+                    </Link>
                 </div>
 
-                <nav className="mt-5 space-y-1.5 px-3" aria-label="Main navigation">
+                <nav className="space-y-1 px-3" aria-label="Main navigation">
                     {sidebarNavigation.map((item) => {
                         const Icon = item.icon;
                         const active = isActive(item.href);
@@ -71,95 +128,72 @@ export default function CareLayout({ children }: PropsWithChildren) {
                                 href={item.href}
                                 prefetch
                                 className={cn(
-                                    'group flex h-12 items-center gap-3 rounded-[14px] px-3.5 text-sm font-medium transition-all duration-200',
+                                    'flex h-12 items-center gap-3 rounded-lg px-3.5 text-sm font-medium transition',
                                     active
-                                        ? 'bg-[#e5eee9] text-[#204b3f]'
-                                        : 'text-[#66736d] hover:bg-[#f0f3f0] hover:text-[#273b34]',
+                                        ? 'bg-brand-100 font-semibold text-brand-800'
+                                        : 'text-ink-600 hover:bg-ink-50 hover:text-ink-900',
                                 )}
                             >
                                 <Icon
                                     className={cn(
-                                        'size-[19px] transition-transform duration-200 group-hover:scale-105',
-                                        active ? 'text-[#2e6a58]' : 'text-[#829089]',
+                                        'size-[19px]',
+                                        active
+                                            ? 'text-brand-700'
+                                            : 'text-ink-400',
                                     )}
-                                    strokeWidth={1.9}
+                                    strokeWidth={active ? 2.2 : 1.9}
                                 />
                                 {item.label}
-                                {active && (
-                                    <ChevronRight className="ml-auto size-4 text-[#6f9185]" />
-                                )}
                             </Link>
                         );
                     })}
                 </nav>
 
-                <div className="mx-5 mt-8 rounded-2xl border border-[#dfe7e1] bg-white p-4">
-                    <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-[#344b43]">
-                        <span className="relative flex size-2">
-                            <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                            <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-                        </span>
-                        All systems secure
-                    </div>
-                    <p className="text-[11px] leading-5 text-[#7a8782]">
-                        Session protected · Last sync just now
-                    </p>
-                </div>
-
-                <div className="mt-auto border-t border-[#e4e8e4] p-3">
-                    <div className="flex items-center gap-3 rounded-2xl p-2.5">
-                        <div className="grid size-10 shrink-0 place-items-center rounded-full bg-[#dbe9e2] text-xs font-bold text-[#285546]">
-                            {initials}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold">{user.name}</p>
-                            <p className="truncate text-[11px] capitalize text-[#7e8b85]">
-                                {String(user.role ?? 'support_worker').replace('_', ' ')}
-                            </p>
-                        </div>
-                        <Link
-                            href="/settings/profile"
-                            className="grid size-8 place-items-center rounded-lg text-[#76847e] transition hover:bg-[#edf1ed] hover:text-[#31463f]"
-                            aria-label="Open account settings"
-                        >
-                            <Settings className="size-4" />
-                        </Link>
-                    </div>
+                <div className="mt-auto space-y-1 border-t border-line p-3">
+                    <Link
+                        href="/settings/profile"
+                        className={cn(
+                            'flex h-12 items-center gap-3 rounded-lg px-3.5 text-sm font-medium transition',
+                            path.startsWith('/settings')
+                                ? 'bg-brand-100 font-semibold text-brand-800'
+                                : 'text-ink-600 hover:bg-ink-50 hover:text-ink-900',
+                        )}
+                    >
+                        <Settings
+                            className="size-[19px] text-ink-400"
+                            strokeWidth={1.9}
+                        />{' '}
+                        Settings
+                    </Link>
                     <Link
                         href="/logout"
                         method="post"
                         as="button"
-                        className="mt-1 flex h-10 w-full items-center gap-2 rounded-xl px-3 text-xs font-medium text-[#7c8883] transition hover:bg-[#f0f2ef] hover:text-[#344a42]"
+                        className="flex h-12 w-full items-center gap-3 rounded-lg px-3.5 text-sm font-medium text-accent-600 transition hover:bg-accent-50"
                     >
-                        <LogOut className="size-4" />
-                        Sign out
+                        <LogOut className="size-[19px]" strokeWidth={1.9} /> Log
+                        out
                     </Link>
                 </div>
             </aside>
 
-            <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#e2e7e2]/90 bg-[#f8faf7]/90 px-4 backdrop-blur-xl lg:hidden">
-                <Link href="/dashboard" className="flex items-center gap-2.5">
-                    <div className="grid size-9 place-items-center rounded-xl bg-[#244f43] text-white">
-                        <HeartHandshake className="size-[18px]" />
-                    </div>
-                    <span className="font-semibold tracking-[-0.02em]">CareFlow</span>
-                </Link>
-                <button
-                    type="button"
-                    className="relative grid size-10 place-items-center rounded-xl border border-[#dfe5df] bg-white text-[#52635c]"
-                    aria-label="Notifications"
-                >
-                    <Bell className="size-[18px]" />
-                    <span className="absolute top-2 right-2 size-2 rounded-full border-2 border-white bg-[#d9715c]" />
-                </button>
-            </header>
-
-            <main className="min-h-screen pb-28 lg:ml-[248px] lg:pb-0">
+            <main className="min-h-[calc(100vh-4rem)] pb-28 lg:ml-[248px] lg:pb-0">
                 {children}
             </main>
 
-            <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-4 rounded-[22px] border border-[#dce3dd] bg-white/95 p-1.5 shadow-[0_16px_40px_rgba(30,48,40,0.16)] backdrop-blur-xl lg:hidden" aria-label="Mobile navigation">
-                {navigation.map((item) => {
+            <Link
+                href="/reports/create"
+                className="fixed right-4 bottom-24 z-50 grid size-14 place-items-center rounded-2xl bg-brand-700 text-white shadow-brand-lg transition active:scale-95 lg:hidden"
+                aria-label="Start a new care record"
+            >
+                <Plus className="size-6" />
+            </Link>
+
+            <nav
+                className="safe-bottom fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-white/95 px-2 pt-1.5 backdrop-blur-xl lg:hidden"
+                aria-label="Mobile navigation"
+            >
+                {mobileNavigation.map((item) => {
                     const Icon = item.icon;
                     const active = isActive(item.href);
 
@@ -168,13 +202,21 @@ export default function CareLayout({ children }: PropsWithChildren) {
                             key={item.href}
                             href={item.href}
                             className={cn(
-                                'flex h-14 flex-col items-center justify-center gap-1 rounded-[16px] text-[10px] font-semibold transition',
-                                active
-                                    ? 'bg-[#e6efe9] text-[#285546]'
-                                    : 'text-[#829089]',
+                                'flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-[10px] font-semibold transition',
+                                active ? 'text-brand-700' : 'text-ink-400',
                             )}
                         >
-                            <Icon className="size-[19px]" strokeWidth={active ? 2.2 : 1.8} />
+                            <span
+                                className={cn(
+                                    'grid h-7 w-12 place-items-center rounded-full transition',
+                                    active && 'bg-brand-100',
+                                )}
+                            >
+                                <Icon
+                                    className="size-[19px]"
+                                    strokeWidth={active ? 2.2 : 1.8}
+                                />
+                            </span>
                             {item.label}
                         </Link>
                     );

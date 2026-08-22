@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SeizureEvent extends Model
 {
     protected $fillable = [
-        'patient_id', 'daily_report_id', 'user_id', 'occurred_at', 'awareness',
+        'participant_id', 'daily_report_id', 'user_id', 'occurred_at', 'awareness',
         'facial_expressions', 'body_movements', 'automatic_movements', 'speech',
         'fell', 'fall_notes', 'after_effects', 'seizure_duration_seconds',
         'recovery_duration_minutes', 'incontinence', 'injured', 'injury_notes',
@@ -33,9 +33,9 @@ class SeizureEvent extends Model
         ];
     }
 
-    public function patient(): BelongsTo
+    public function participant(): BelongsTo
     {
-        return $this->belongsTo(Patient::class);
+        return $this->belongsTo(Participant::class);
     }
 
     public function dailyReport(): BelongsTo

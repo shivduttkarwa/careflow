@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\AuditEvent;
-use App\Models\Patient;
+use App\Models\Participant;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\RedirectResponse;
@@ -25,7 +26,7 @@ class TeamController extends Controller
         Gate::authorize('viewAny', User::class);
 
         $members = User::query()
-            ->with(['patients' => fn ($query) => $this->currentAssignments($query)])
+            ->with(['participants' => fn ($query) => $this->currentAssignments($query)])
             ->withCount(['dailyReports as submitted_reports_count' => fn ($query) => $query->where('status', 'submitted')])
             ->withMax('dailyReports as last_report_date', 'report_date')
             ->orderByRaw("CASE WHEN role = 'support_worker' THEN 0 ELSE 1 END")
@@ -39,19 +40,21 @@ class TeamController extends Controller
                 'email' => $member->email,
                 'role' => $member->role,
                 'is_manager' => $member->isManager(),
-                'patient_ids' => $member->patients->pluck('id')->values(),
+                'participant_ids' => $member->participants->pluck('id')->values(),
                 'submitted_reports_count' => $member->submitted_reports_count,
-                'last_report_date' => $member->last_report_date,
+                'last_report_date' => $member->last_report_date
+                    ? Carbon::parse($member->last_report_date)->format('j M Y')
+                    : null,
             ]),
-            'patients' => Patient::query()
+            'participants' => Participant::query()
                 ->with('home')
                 ->where('status', 'active')
                 ->orderBy('first_name')
                 ->get()
-                ->map(fn (Patient $patient) => [
-                    'id' => $patient->id,
-                    'name' => $patient->display_name,
-                    'home' => $patient->home->name,
+                ->map(fn (Participant $participant) => [
+                    'id' => $participant->id,
+                    'name' => $participant->display_name,
+                    'home' => $participant->home->name,
                 ]),
         ]);
     }
@@ -64,8 +67,8 @@ class TeamController extends Controller
             ...$this->profileRules(),
             'password' => $this->passwordRules(),
             'role' => ['required', 'in:support_worker,manager'],
-            'patients' => ['array'],
-            'patients.*' => ['integer', 'exists:patients,id'],
+            'participants' => ['array'],
+            'participants.*' => ['integer', 'exists:participants,id'],
         ]);
 
         $member = DB::transaction(function () use ($data, $request) {
@@ -79,47 +82,47 @@ class TeamController extends Controller
             $member->email_verified_at = now();
             $member->save();
 
-            $this->syncAssignments($member, $data['patients'] ?? []);
+            $this->syncAssignments($member, $data['participants'] ?? []);
             $this->audit($request, $member, 'created', ['role' => $member->role]);
 
             return $member;
         });
 
-        return back()->with('success', $member->name.' can now sign in to CareFlow.');
+        return back()->with('success', $member->name.' can now sign in to '.config('app.name').'.');
     }
 
     public function updateAssignments(Request $request, User $member): RedirectResponse
     {
-        Gate::authorize('assignPatients', $member);
+        Gate::authorize('assignParticipants', $member);
 
         $data = $request->validate([
-            'patients' => ['array'],
-            'patients.*' => ['integer', 'exists:patients,id'],
+            'participants' => ['array'],
+            'participants.*' => ['integer', 'exists:participants,id'],
         ]);
 
         DB::transaction(function () use ($data, $member, $request) {
-            $this->syncAssignments($member, $data['patients'] ?? []);
-            $this->audit($request, $member, 'access-updated', ['patients' => $data['patients'] ?? []]);
+            $this->syncAssignments($member, $data['participants'] ?? []);
+            $this->audit($request, $member, 'access-updated', ['participants' => $data['participants'] ?? []]);
         });
 
-        return back()->with('success', 'Patient access updated for '.$member->name.'.');
+        return back()->with('success', 'Participant access updated for '.$member->name.'.');
     }
 
     /**
-     * @param  list<int>  $patientIds
+     * @param  list<int>  $participantIds
      */
-    private function syncAssignments(User $member, array $patientIds): void
+    private function syncAssignments(User $member, array $participantIds): void
     {
-        $current = $this->currentAssignments($member->patients())->pluck('patients.id');
+        $current = $this->currentAssignments($member->participants())->pluck('participants.id');
 
-        foreach ($current->diff($patientIds) as $patientId) {
-            $this->assignmentRows($member, (int) $patientId)
+        foreach ($current->diff($participantIds) as $participantId) {
+            $this->assignmentRows($member, (int) $participantId)
                 ->where(fn ($query) => $query->whereNull('ends_on')->orWhere('ends_on', '>=', today()))
                 ->update(['ends_on' => today()->subDay(), 'updated_at' => now()]);
         }
 
-        foreach (collect($patientIds)->diff($current) as $patientId) {
-            $today = $this->assignmentRows($member, (int) $patientId)->whereDate('starts_on', today());
+        foreach (collect($participantIds)->diff($current) as $participantId) {
+            $today = $this->assignmentRows($member, (int) $participantId)->whereDate('starts_on', today());
 
             if ($today->exists()) {
                 $today->update(['ends_on' => null, 'updated_at' => now()]);
@@ -127,30 +130,30 @@ class TeamController extends Controller
                 continue;
             }
 
-            $member->patients()->attach($patientId, ['starts_on' => today(), 'ends_on' => null]);
+            $member->participants()->attach($participantId, ['starts_on' => today(), 'ends_on' => null]);
         }
     }
 
-    private function assignmentRows(User $member, int $patientId): QueryBuilder
+    private function assignmentRows(User $member, int $participantId): QueryBuilder
     {
-        return DB::table('patient_user_assignments')
+        return DB::table('participant_user_assignments')
             ->where('user_id', $member->id)
-            ->where('patient_id', $patientId);
+            ->where('participant_id', $participantId);
     }
 
     /**
-     * Limit a patient relation to assignments that are open today.
+     * Limit a participant relation to assignments that are open today.
      *
-     * @param  BelongsToMany<Patient, User>  $query
-     * @return BelongsToMany<Patient, User>
+     * @param  BelongsToMany<Participant, User>  $query
+     * @return BelongsToMany<Participant, User>
      */
     private function currentAssignments(BelongsToMany $query): BelongsToMany
     {
         return $query
             ->wherePivot('starts_on', '<=', today())
             ->where(function ($dates) {
-                $dates->whereNull('patient_user_assignments.ends_on')
-                    ->orWhere('patient_user_assignments.ends_on', '>=', today());
+                $dates->whereNull('participant_user_assignments.ends_on')
+                    ->orWhere('participant_user_assignments.ends_on', '>=', today());
             });
     }
 

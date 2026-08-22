@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class DailyReport extends Model
 {
     protected $fillable = [
-        'patient_id', 'shift_id', 'user_id', 'report_date', 'shift_type', 'status',
+        'participant_id', 'shift_id', 'user_id', 'report_date', 'shift_type', 'status',
         'shower_taken', 'bed_bath', 'personal_care_notes', 'physio_completed',
         'breakfast', 'lunch', 'dinner', 'snacks', 'fluids_ml', 'fluids_notes', 'food_notes',
         'bowel_opened', 'bowel_texture', 'bowel_notes', 'urine_status', 'urine_notes',
@@ -30,9 +30,9 @@ class DailyReport extends Model
         ];
     }
 
-    public function patient(): BelongsTo
+    public function participant(): BelongsTo
     {
-        return $this->belongsTo(Patient::class);
+        return $this->belongsTo(Participant::class);
     }
 
     public function shift(): BelongsTo

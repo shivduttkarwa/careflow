@@ -3,7 +3,7 @@
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\DailyReportController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\PatientController;
+use App\Http\Controllers\ParticipantController;
 use App\Http\Controllers\SeizureEventController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
@@ -13,10 +13,10 @@ Route::redirect('/', '/login')->name('home');
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
-    Route::get('patients', [PatientController::class, 'index'])->name('patients.index');
-    Route::get('patients/create', [PatientController::class, 'create'])->name('patients.create');
-    Route::post('patients', [PatientController::class, 'store'])->name('patients.store');
-    Route::get('patients/{patient}', [PatientController::class, 'show'])->name('patients.show');
+    Route::get('participants', [ParticipantController::class, 'index'])->name('participants.index');
+    Route::get('participants/create', [ParticipantController::class, 'create'])->name('participants.create');
+    Route::post('participants', [ParticipantController::class, 'store'])->name('participants.store');
+    Route::get('participants/{participant}', [ParticipantController::class, 'show'])->name('participants.show');
     Route::get('reports', [DailyReportController::class, 'index'])->name('reports.index');
     Route::get('reports/create', [DailyReportController::class, 'create'])->name('reports.create');
     Route::get('reports/export', [DailyReportController::class, 'export'])->name('reports.export');

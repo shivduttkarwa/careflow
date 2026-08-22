@@ -50,9 +50,9 @@ class User extends Authenticatable implements PasskeyUser
         ];
     }
 
-    public function patients(): BelongsToMany
+    public function participants(): BelongsToMany
     {
-        return $this->belongsToMany(Patient::class, 'patient_user_assignments')
+        return $this->belongsToMany(Participant::class, 'participant_user_assignments')
             ->withPivot(['starts_on', 'ends_on'])
             ->withTimestamps();
     }

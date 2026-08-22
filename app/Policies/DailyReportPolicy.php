@@ -3,7 +3,7 @@
 namespace App\Policies;
 
 use App\Models\DailyReport;
-use App\Models\Patient;
+use App\Models\Participant;
 use App\Models\User;
 
 class DailyReportPolicy
@@ -15,12 +15,12 @@ class DailyReportPolicy
 
     public function view(User $user, DailyReport $dailyReport): bool
     {
-        return $user->can('view', $dailyReport->patient);
+        return $user->can('view', $dailyReport->participant);
     }
 
-    public function create(User $user, Patient $patient): bool
+    public function create(User $user, Participant $participant): bool
     {
-        return $user->can('view', $patient);
+        return $user->can('view', $participant);
     }
 
     public function update(User $user, DailyReport $dailyReport): bool
@@ -30,6 +30,6 @@ class DailyReportPolicy
         }
 
         return $user->isManager()
-            || ($dailyReport->user_id === $user->id && $user->can('view', $dailyReport->patient));
+            || ($dailyReport->user_id === $user->id && $user->can('view', $dailyReport->participant));
     }
 }

@@ -9,8 +9,8 @@ class Home extends Model
 {
     protected $fillable = ['name', 'address', 'timezone'];
 
-    public function patients(): HasMany
+    public function participants(): HasMany
     {
-        return $this->hasMany(Patient::class);
+        return $this->hasMany(Participant::class);
     }
 }

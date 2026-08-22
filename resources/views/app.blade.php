@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#244f43">
+        <meta name="theme-color" content="#115e74">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="default">
         <link rel="manifest" href="/manifest.webmanifest">
@@ -26,18 +26,18 @@
         {{-- Inline style to set the HTML background color based on our theme in app.css --}}
         <style>
             html {
-                background-color: #f4f6f3;
+                background-color: #f5f9fb;
             }
 
             html.dark {
-                background-color: oklch(0.145 0 0);
+                background-color: #0b1a20;
             }
         </style>
 
         {{-- ?v is bumped when the icon artwork changes; browsers cache favicons well past a deploy. --}}
-        <link rel="icon" href="/favicon.ico?v=2" sizes="any">
-        <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
+        <link rel="icon" href="/favicon.ico?v=3" sizes="any">
+        <link rel="icon" href="/favicon.svg?v=3" type="image/svg+xml">
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=3">
 
         @fonts
 

@@ -1,11 +1,11 @@
 <article class="page">
     <header>
-        <div><div class="brand">CareFlow · Secure care record</div><h1>Daily Care Needs Record</h1></div>
-        <div class="meta"><strong>{{ $report->patient->home->name }}</strong><br>Record #{{ str_pad((string) $report->id, 6, '0', STR_PAD_LEFT) }}</div>
+        <div><div class="brand">Ignite Community Services · Secure care record</div><h1>Daily Care Needs Record</h1></div>
+        <div class="meta"><strong>{{ $report->participant->home->name }}</strong><br>Record #{{ str_pad((string) $report->id, 6, '0', STR_PAD_LEFT) }}</div>
     </header>
 
     <div class="identity">
-        <div><div class="label">Participant</div><div class="value">{{ $report->patient->first_name }} {{ $report->patient->last_name }}</div></div>
+        <div><div class="label">Participant</div><div class="value">{{ $report->participant->first_name }} {{ $report->participant->last_name }}</div></div>
         <div><div class="label">Date</div><div class="value">{{ $report->report_date->format('d M Y') }}</div></div>
         <div><div class="label">Shift</div><div class="value">{{ ucfirst($report->shift_type) }}{{ $report->shift ? ' · '.$report->shift->starts_at->format('g:i A').'–'.$report->shift->ends_at->format('g:i A') : '' }}</div></div>
         <div><div class="label">Staff member</div><div class="value">{{ $report->user->name }}</div></div>

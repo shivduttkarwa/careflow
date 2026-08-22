@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\DailyReport;
 use App\Models\Home;
-use App\Models\Patient;
+use App\Models\Participant;
 use App\Models\SeizureEvent;
 use App\Models\User;
 use Database\Seeders\AccountSeeder;
@@ -16,30 +16,30 @@ class CareWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_worker_can_only_open_a_daily_note_for_an_assigned_patient(): void
+    public function test_worker_can_only_open_a_daily_note_for_an_assigned_participant(): void
     {
-        [$worker, $patient] = $this->careContext(assigned: false);
+        [$worker, $participant] = $this->careContext(assigned: false);
 
         $this->actingAs($worker)
-            ->get(route('reports.create', ['patient' => $patient->id]))
+            ->get(route('reports.create', ['participant' => $participant->id]))
             ->assertForbidden();
 
-        $patient->users()->attach($worker->id, [
+        $participant->users()->attach($worker->id, [
             'starts_on' => today()->subDay(),
             'ends_on' => null,
         ]);
 
         $this->actingAs($worker)
-            ->get(route('reports.create', ['patient' => $patient->id]))
+            ->get(route('reports.create', ['participant' => $participant->id]))
             ->assertOk();
     }
 
     public function test_assigned_worker_can_submit_a_daily_report(): void
     {
-        [$worker, $patient] = $this->careContext();
+        [$worker, $participant] = $this->careContext();
 
         $response = $this->actingAs($worker)->post(route('reports.store'), [
-            'patient_id' => $patient->id,
+            'participant_id' => $participant->id,
             'shift_id' => null,
             'report_date' => today()->format('Y-m-d'),
             'shift_type' => 'day',
@@ -68,11 +68,11 @@ class CareWorkflowTest extends TestCase
 
     public function test_submitted_report_is_locked_and_unassigned_workers_cannot_view_it(): void
     {
-        [$worker, $patient] = $this->careContext();
+        [$worker, $participant] = $this->careContext();
         $otherWorker = User::factory()->create(['role' => 'support_worker']);
 
         $report = DailyReport::create([
-            'patient_id' => $patient->id,
+            'participant_id' => $participant->id,
             'user_id' => $worker->id,
             'report_date' => today(),
             'shift_type' => 'day',
@@ -90,13 +90,13 @@ class CareWorkflowTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_manager_can_review_reports_for_any_patient(): void
+    public function test_manager_can_review_reports_for_any_participant(): void
     {
-        [$worker, $patient] = $this->careContext();
+        [$worker, $participant] = $this->careContext();
         $manager = User::factory()->create(['role' => 'manager']);
 
         $report = DailyReport::create([
-            'patient_id' => $patient->id,
+            'participant_id' => $participant->id,
             'user_id' => $worker->id,
             'report_date' => today(),
             'shift_type' => 'day',
@@ -110,40 +110,40 @@ class CareWorkflowTest extends TestCase
             ->assertOk();
     }
 
-    public function test_worker_can_add_a_patient_and_is_assigned_to_their_care_team(): void
+    public function test_worker_can_add_a_participant_and_is_assigned_to_their_care_team(): void
     {
         $worker = User::factory()->create(['role' => 'support_worker']);
 
-        $response = $this->actingAs($worker)->post(route('patients.store'), [
+        $response = $this->actingAs($worker)->post(route('participants.store'), [
             'name' => 'Taylor Morgan',
             'preferred_name' => 'Tay',
             'home_name' => 'Community Care',
             'support_summary' => 'Uses clear, unhurried communication.',
         ]);
 
-        $patient = Patient::firstOrFail();
+        $participant = Participant::firstOrFail();
 
-        $response->assertRedirect(route('reports.create', ['patient' => $patient->id]));
-        $this->assertSame('Taylor', $patient->first_name);
-        $this->assertSame('Morgan', $patient->last_name);
-        $this->assertSame('Tay', $patient->preferred_name);
-        $this->assertDatabaseHas('patient_user_assignments', [
-            'patient_id' => $patient->id,
+        $response->assertRedirect(route('reports.create', ['participant' => $participant->id]));
+        $this->assertSame('Taylor', $participant->first_name);
+        $this->assertSame('Morgan', $participant->last_name);
+        $this->assertSame('Tay', $participant->preferred_name);
+        $this->assertDatabaseHas('participant_user_assignments', [
+            'participant_id' => $participant->id,
             'user_id' => $worker->id,
         ]);
         $this->assertDatabaseHas('audit_events', [
-            'auditable_id' => $patient->id,
+            'auditable_id' => $participant->id,
             'event' => 'created',
         ]);
     }
 
-    public function test_empty_account_is_sent_to_patient_setup_before_starting_a_note(): void
+    public function test_empty_account_is_sent_to_participant_setup_before_starting_a_note(): void
     {
         $worker = User::factory()->create(['role' => 'support_worker']);
 
         $this->actingAs($worker)
             ->get(route('reports.create'))
-            ->assertRedirect(route('patients.create'));
+            ->assertRedirect(route('participants.create'));
     }
 
     public function test_demo_seed_creates_a_reviewable_care_history(): void
@@ -152,7 +152,7 @@ class CareWorkflowTest extends TestCase
 
         $this->assertDatabaseCount('users', count(AccountSeeder::ACCOUNTS));
         $this->assertDatabaseCount('homes', 3);
-        $this->assertDatabaseCount('patients', 7);
+        $this->assertDatabaseCount('participants', 7);
         $this->assertDatabaseCount('announcements', 3);
 
         $this->assertGreaterThan(400, DailyReport::count());
@@ -190,7 +190,7 @@ class CareWorkflowTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('currentShift', null)
-                ->where('patientCount', 7));
+                ->where('participantCount', 7));
     }
 
     public function test_dashboard_counts_only_the_current_week_of_reports(): void
@@ -214,12 +214,12 @@ class CareWorkflowTest extends TestCase
             ->assertDontSee('defaultValue="password"', false);
     }
 
-    /** @return array{User, Patient} */
+    /** @return array{User, Participant} */
     private function careContext(bool $assigned = true): array
     {
         $worker = User::factory()->create(['role' => 'support_worker']);
         $home = Home::create(['name' => 'Banksia House']);
-        $patient = Patient::create([
+        $participant = Participant::create([
             'home_id' => $home->id,
             'first_name' => 'Ava',
             'last_name' => 'Mitchell',
@@ -227,12 +227,12 @@ class CareWorkflowTest extends TestCase
         ]);
 
         if ($assigned) {
-            $patient->users()->attach($worker->id, [
+            $participant->users()->attach($worker->id, [
                 'starts_on' => today()->subDay(),
                 'ends_on' => null,
             ]);
         }
 
-        return [$worker, $patient];
+        return [$worker, $participant];
     }
 }

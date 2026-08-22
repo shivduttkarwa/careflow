@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Shift extends Model
 {
     protected $fillable = [
-        'patient_id', 'user_id', 'starts_at', 'ends_at', 'status', 'handover_read_at',
+        'participant_id', 'user_id', 'starts_at', 'ends_at', 'status', 'handover_read_at',
     ];
 
     protected function casts(): array
@@ -21,9 +21,9 @@ class Shift extends Model
         ];
     }
 
-    public function patient(): BelongsTo
+    public function participant(): BelongsTo
     {
-        return $this->belongsTo(Patient::class);
+        return $this->belongsTo(Participant::class);
     }
 
     public function user(): BelongsTo

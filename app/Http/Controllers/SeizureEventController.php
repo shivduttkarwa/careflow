@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditEvent;
 use App\Models\DailyReport;
-use App\Models\Patient;
+use App\Models\Participant;
 use App\Models\SeizureEvent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,21 +16,21 @@ class SeizureEventController extends Controller
 {
     public function create(Request $request): Response
     {
-        $patient = Patient::with('home')->findOrFail($request->integer('patient'));
-        Gate::authorize('view', $patient);
+        $participant = Participant::with('home')->findOrFail($request->integer('participant'));
+        Gate::authorize('view', $participant);
 
         $report = $request->integer('report')
-            ? DailyReport::where('patient_id', $patient->id)->findOrFail($request->integer('report'))
+            ? DailyReport::where('participant_id', $participant->id)->findOrFail($request->integer('report'))
             : null;
 
         return Inertia::render('seizures/create', [
-            'patient' => [
-                'id' => $patient->id,
-                'display_name' => $patient->display_name,
-                'full_name' => $patient->first_name.' '.$patient->last_name,
-                'initials' => $patient->initials,
-                'home' => $patient->home->name,
-                'accent_colour' => $patient->accent_colour,
+            'participant' => [
+                'id' => $participant->id,
+                'display_name' => $participant->display_name,
+                'full_name' => $participant->first_name.' '.$participant->last_name,
+                'initials' => $participant->initials,
+                'home' => $participant->home->name,
+                'accent_colour' => $participant->accent_colour,
             ],
             'reportId' => $report?->id,
             'observerName' => $request->user()->name,
@@ -40,7 +40,7 @@ class SeizureEventController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'patient_id' => ['required', 'exists:patients,id'],
+            'participant_id' => ['required', 'exists:participants,id'],
             'daily_report_id' => ['nullable', 'exists:daily_reports,id'],
             'occurred_at' => ['required', 'date'],
             'awareness' => ['array'],
@@ -67,8 +67,8 @@ class SeizureEventController extends Controller
             'observer_name' => ['required', 'string', 'max:150'],
         ]);
 
-        $patient = Patient::findOrFail($data['patient_id']);
-        Gate::authorize('view', $patient);
+        $participant = Participant::findOrFail($data['participant_id']);
+        Gate::authorize('view', $participant);
 
         $event = SeizureEvent::create([
             ...$data,
@@ -81,7 +81,7 @@ class SeizureEventController extends Controller
             'auditable_type' => SeizureEvent::class,
             'auditable_id' => $event->id,
             'event' => 'submitted',
-            'new_values' => ['patient_id' => $event->patient_id, 'occurred_at' => $event->occurred_at],
+            'new_values' => ['participant_id' => $event->participant_id, 'occurred_at' => $event->occurred_at],
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);

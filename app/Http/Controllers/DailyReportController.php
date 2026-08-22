@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuditEvent;
 use App\Models\DailyReport;
 use App\Models\Home;
-use App\Models\Patient;
+use App\Models\Participant;
 use App\Models\Shift;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,10 +26,10 @@ class DailyReportController extends Controller
      */
     private const BOOK_LIMIT = 120;
 
-    private const FILTER_KEYS = ['patient', 'worker', 'home', 'from', 'to'];
+    private const FILTER_KEYS = ['participant', 'worker', 'home', 'from', 'to'];
 
     private const EXPORT_COLUMNS = [
-        'Record ID', 'Home', 'Patient', 'Date', 'Day', 'Shift', 'Support worker', 'Status', 'Submitted at',
+        'Record ID', 'Home', 'Participant', 'Date', 'Day', 'Shift', 'Support worker', 'Status', 'Submitted at',
         'Shower taken', 'Bed bath', 'Physio completed', 'Personal care notes',
         'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Fluids (mL)', 'Fluid notes', 'Food notes',
         'Bowel opened', 'Bowel texture', 'Bowel notes', 'Urine observation', 'Urine notes',
@@ -43,21 +43,21 @@ class DailyReportController extends Controller
         $user = $request->user();
 
         $reports = $this->filteredReports($request, $user)
-            ->with(['patient.home', 'user'])
+            ->with(['participant.home', 'user'])
             ->withCount('seizureEvents')
             ->paginate(12)
             ->withQueryString()
             ->through(fn (DailyReport $report) => $this->summaryPayload($report));
 
-        $patients = $this->accessiblePatients($user);
+        $participants = $this->accessibleParticipants($user);
 
         return Inertia::render('reports/index', [
             'reports' => $reports,
-            'patients' => $patients->map(fn (Patient $patient) => [
-                'id' => $patient->id,
-                'name' => $patient->display_name,
+            'participants' => $participants->map(fn (Participant $participant) => [
+                'id' => $participant->id,
+                'name' => $participant->display_name,
             ]),
-            'homes' => $patients->pluck('home')->unique('id')->sortBy('name')->values()
+            'homes' => $participants->pluck('home')->unique('id')->sortBy('name')->values()
                 ->map(fn (Home $home) => ['id' => $home->id, 'name' => $home->name]),
             'workers' => $user->isManager()
                 ? User::query()->where('role', 'support_worker')->orderBy('name')->get(['id', 'name'])
@@ -72,7 +72,7 @@ class DailyReportController extends Controller
         $user = $request->user();
 
         $reports = $this->filteredReports($request, $user)
-            ->with(['patient.home', 'user'])
+            ->with(['participant.home', 'user'])
             ->withCount('seizureEvents');
 
         $this->auditExport($request, 'exported-csv');
@@ -108,7 +108,7 @@ class DailyReportController extends Controller
         $total = (clone $query)->count();
 
         $reports = $query
-            ->with(['patient.home', 'user', 'shift', 'seizureEvents'])
+            ->with(['participant.home', 'user', 'shift', 'seizureEvents'])
             ->reorder('report_date')
             ->orderBy('id')
             ->limit(self::BOOK_LIMIT)
@@ -127,24 +127,24 @@ class DailyReportController extends Controller
     public function create(Request $request): Response|RedirectResponse
     {
         $user = $request->user();
-        $patients = $this->accessiblePatients($user);
+        $participants = $this->accessibleParticipants($user);
 
-        if ($patients->isEmpty()) {
-            if ($request->integer('patient')) {
-                $requestedPatient = Patient::findOrFail($request->integer('patient'));
-                Gate::authorize('create', [DailyReport::class, $requestedPatient]);
+        if ($participants->isEmpty()) {
+            if ($request->integer('participant')) {
+                $requestedParticipant = Participant::findOrFail($request->integer('participant'));
+                Gate::authorize('create', [DailyReport::class, $requestedParticipant]);
             }
 
             return redirect()
-                ->route('patients.create')
-                ->with('error', 'Add a patient before starting a daily note.');
+                ->route('participants.create')
+                ->with('error', 'Add a participant before starting a daily note.');
         }
 
-        $patient = $patients->firstWhere('id', $request->integer('patient')) ?? $patients->first();
-        Gate::authorize('create', [DailyReport::class, $patient]);
+        $participant = $participants->firstWhere('id', $request->integer('participant')) ?? $participants->first();
+        Gate::authorize('create', [DailyReport::class, $participant]);
 
         $shift = Shift::query()
-            ->where('patient_id', $patient->id)
+            ->where('participant_id', $participant->id)
             ->when(! $user->isManager(), fn ($query) => $query->where('user_id', $user->id))
             ->whereIn('status', ['in_progress', 'scheduled'])
             ->latest('starts_at')
@@ -152,8 +152,8 @@ class DailyReportController extends Controller
 
         return Inertia::render('reports/form', [
             'report' => null,
-            'patients' => $patients->map(fn (Patient $item) => $this->patientPayload($item)),
-            'selectedPatient' => $this->patientPayload($patient),
+            'participants' => $participants->map(fn (Participant $item) => $this->participantPayload($item)),
+            'selectedParticipant' => $this->participantPayload($participant),
             'shift' => $shift ? $this->shiftPayload($shift) : null,
         ]);
     }
@@ -161,8 +161,8 @@ class DailyReportController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validatedData($request);
-        $patient = Patient::findOrFail($data['patient_id']);
-        Gate::authorize('create', [DailyReport::class, $patient]);
+        $participant = Participant::findOrFail($data['participant_id']);
+        Gate::authorize('create', [DailyReport::class, $participant]);
 
         $isSubmitted = $request->string('intent')->toString() === 'submit';
         $report = DailyReport::create([
@@ -186,10 +186,10 @@ class DailyReportController extends Controller
     public function show(Request $request, DailyReport $report): Response
     {
         Gate::authorize('view', $report);
-        $report->load(['patient.home', 'user', 'shift', 'seizureEvents']);
+        $report->load(['participant.home', 'user', 'shift', 'seizureEvents']);
 
         $previous = DailyReport::query()
-            ->where('patient_id', $report->patient_id)
+            ->where('participant_id', $report->participant_id)
             ->where('status', 'submitted')
             ->where(function ($query) use ($report) {
                 $query->whereDate('report_date', '<', $report->report_date)
@@ -198,7 +198,7 @@ class DailyReportController extends Controller
             ->latest('report_date')->latest('id')->first();
 
         $next = DailyReport::query()
-            ->where('patient_id', $report->patient_id)
+            ->where('participant_id', $report->participant_id)
             ->where('status', 'submitted')
             ->where(function ($query) use ($report) {
                 $query->whereDate('report_date', '>', $report->report_date)
@@ -216,12 +216,12 @@ class DailyReportController extends Controller
     public function edit(Request $request, DailyReport $report): Response
     {
         Gate::authorize('update', $report);
-        $report->load(['patient.home', 'shift']);
+        $report->load(['participant.home', 'shift']);
 
         return Inertia::render('reports/form', [
             'report' => $this->reportPayload($report),
-            'patients' => $this->accessiblePatients($request->user())->map(fn (Patient $item) => $this->patientPayload($item)),
-            'selectedPatient' => $this->patientPayload($report->patient),
+            'participants' => $this->accessibleParticipants($request->user())->map(fn (Participant $item) => $this->participantPayload($item)),
+            'selectedParticipant' => $this->participantPayload($report->participant),
             'shift' => $report->shift ? $this->shiftPayload($report->shift) : null,
         ]);
     }
@@ -252,7 +252,7 @@ class DailyReportController extends Controller
     public function print(Request $request, DailyReport $report): View
     {
         Gate::authorize('view', $report);
-        $report->load(['patient.home', 'user', 'shift', 'seizureEvents']);
+        $report->load(['participant.home', 'user', 'shift', 'seizureEvents']);
 
         return view('reports.print', compact('report'));
     }
@@ -266,10 +266,10 @@ class DailyReportController extends Controller
     private function filteredReports(Request $request, User $user): Builder
     {
         return DailyReport::query()
-            ->when(! $user->isManager(), fn (Builder $query) => $this->limitToAssignedPatients($query, $user))
-            ->when($request->integer('patient'), fn ($query, $id) => $query->where('patient_id', $id))
+            ->when(! $user->isManager(), fn (Builder $query) => $this->limitToAssignedParticipants($query, $user))
+            ->when($request->integer('participant'), fn ($query, $id) => $query->where('participant_id', $id))
             ->when($request->integer('worker'), fn ($query, $id) => $query->where('user_id', $id))
-            ->when($request->integer('home'), fn ($query, $id) => $query->whereHas('patient', fn ($patient) => $patient->where('home_id', $id)))
+            ->when($request->integer('home'), fn ($query, $id) => $query->whereHas('participant', fn ($participant) => $participant->where('home_id', $id)))
             ->when($request->filled('from'), fn ($query) => $query->whereDate('report_date', '>=', $request->date('from')))
             ->when($request->filled('to'), fn ($query) => $query->whereDate('report_date', '<=', $request->date('to')))
             ->latest('report_date')
@@ -285,8 +285,8 @@ class DailyReportController extends Controller
 
         return [
             $report->id,
-            $report->patient->home->name,
-            $report->patient->first_name.' '.$report->patient->last_name,
+            $report->participant->home->name,
+            $report->participant->first_name.' '.$report->participant->last_name,
             $report->report_date->format('Y-m-d'),
             $report->report_date->format('D'),
             ucfirst($report->shift_type),
@@ -351,7 +351,7 @@ class DailyReportController extends Controller
     private function validatedData(Request $request): array
     {
         return $request->validate([
-            'patient_id' => ['required', 'integer', 'exists:patients,id'],
+            'participant_id' => ['required', 'integer', 'exists:participants,id'],
             'shift_id' => ['nullable', 'integer', 'exists:shifts,id'],
             'report_date' => ['required', 'date'],
             'shift_type' => ['required', 'in:day,evening,night'],
@@ -381,11 +381,11 @@ class DailyReportController extends Controller
     }
 
     /**
-     * @return EloquentCollection<int, Patient>
+     * @return EloquentCollection<int, Participant>
      */
-    private function accessiblePatients(User $user): EloquentCollection
+    private function accessibleParticipants(User $user): EloquentCollection
     {
-        return Patient::query()
+        return Participant::query()
             ->visibleTo($user)
             ->with('home')
             ->where('status', 'active')
@@ -397,24 +397,24 @@ class DailyReportController extends Controller
      * @param  Builder<DailyReport>  $query
      * @return Builder<DailyReport>
      */
-    private function limitToAssignedPatients(Builder $query, User $user): Builder
+    private function limitToAssignedParticipants(Builder $query, User $user): Builder
     {
         return $query->whereHas(
-            'patient.users',
-            fn ($assignment) => Patient::constrainToOpenAssignment($assignment, $user),
+            'participant.users',
+            fn ($assignment) => Participant::constrainToOpenAssignment($assignment, $user),
         );
     }
 
-    private function patientPayload(Patient $patient): array
+    private function participantPayload(Participant $participant): array
     {
         return [
-            'id' => $patient->id,
-            'display_name' => $patient->display_name,
-            'full_name' => $patient->first_name.' '.$patient->last_name,
-            'initials' => $patient->initials,
-            'home' => $patient->home->name,
-            'accent_colour' => $patient->accent_colour,
-            'support_summary' => $patient->support_summary,
+            'id' => $participant->id,
+            'display_name' => $participant->display_name,
+            'full_name' => $participant->first_name.' '.$participant->last_name,
+            'initials' => $participant->initials,
+            'home' => $participant->home->name,
+            'accent_colour' => $participant->accent_colour,
+            'support_summary' => $participant->support_summary,
         ];
     }
 
@@ -432,10 +432,10 @@ class DailyReportController extends Controller
     {
         return [
             'id' => $report->id,
-            'patient' => $report->patient->display_name,
-            'initials' => $report->patient->initials,
-            'accent_colour' => $report->patient->accent_colour,
-            'home' => $report->patient->home->name,
+            'participant' => $report->participant->display_name,
+            'initials' => $report->participant->initials,
+            'accent_colour' => $report->participant->accent_colour,
+            'home' => $report->participant->home->name,
             'date' => $report->report_date->format('Y-m-d'),
             'date_label' => $report->report_date->format('D, j M Y'),
             'shift_type' => $report->shift_type,
@@ -451,7 +451,7 @@ class DailyReportController extends Controller
     {
         return [
             ...$report->only([
-                'id', 'patient_id', 'shift_id', 'shift_type', 'status', 'shower_taken',
+                'id', 'participant_id', 'shift_id', 'shift_type', 'status', 'shower_taken',
                 'bed_bath', 'personal_care_notes', 'physio_completed', 'breakfast',
                 'lunch', 'dinner', 'snacks', 'fluids_ml', 'fluids_notes', 'food_notes',
                 'bowel_opened', 'bowel_texture', 'bowel_notes', 'urine_status',
@@ -460,7 +460,7 @@ class DailyReportController extends Controller
             ]),
             'report_date' => $report->report_date->format('Y-m-d'),
             'submitted_at' => $report->submitted_at?->toIso8601String(),
-            'patient' => $this->patientPayload($report->patient),
+            'participant' => $this->participantPayload($report->participant),
             'worker' => $report->relationLoaded('user') ? $report->user->name : null,
             'shift_label' => $report->relationLoaded('shift') && $report->shift ? $this->shiftPayload($report->shift)['label'] : null,
             'seizure_events' => $report->relationLoaded('seizureEvents')

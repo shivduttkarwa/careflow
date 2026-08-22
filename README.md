@@ -1,21 +1,23 @@
-# CareFlow MVP
+# Ignite Care Portal MVP
 
-CareFlow is a responsive support-worker portal built from the client's Daily Care
-Needs and Seizure Observation forms. It is designed as a fast web app/PWA that
+The Ignite Care Portal is a responsive support-worker portal built from the
+client's Daily Care Needs and Seizure Observation forms, themed to the Ignite
+Community Services brand. It is designed as a fast web app/PWA that
 works on phones, tablets, and desktop browsers.
 
 ## Included in the MVP
 
 - Invite-only worker and manager accounts — there is no public sign-up
 - Manager-controlled team access: create accounts and grant or revoke
-  patient-by-patient access
-- Searchable patient directory, and a patient profile showing recent shifts,
-  care team and follow-ups — the way in to writing a note
-- Patient creation with automatic care-team assignment
+  participant-by-participant access
+- Searchable participant directory, and a participant profile showing recent
+  shifts, care team and follow-ups — the way in to writing a record
+- Participant creation with automatic care-team assignment
 - Current-shift dashboard and handover summary
 - Five-step daily care record with draft saving and submission locking
 - Seizure observation records linked to the daily report
-- Report history filtered by home, patient, support worker and date range
+- Care record history filtered by service, participant, support worker and date
+  range
 - Spreadsheet (CSV) export of every filtered record, ready for Excel or Sheets
 - Care book: all filtered records as one printable, PDF-ready document
 - Print-friendly PDF export of a single record using **Save as PDF**
@@ -32,11 +34,11 @@ Every account uses the password `password`.
 | Email | Role |
 | --- | --- |
 | `worker@careflow.test` | Support worker (Aisha Rahman) — signs in to a shift that is running now |
-| `manager@careflow.test` | Manager (Denise Whitlock) — sees all three homes and team access |
+| `manager@careflow.test` | Manager (Denise Whitlock) — sees all three services and team access |
 | `worker2@careflow.test` … `worker6@careflow.test` | Additional support workers |
 
-`php artisan migrate --seed` builds a full demonstration service: three homes,
-seven patients, four weeks of daily records across day, evening and night
+`php artisan migrate --seed` builds a full demonstration service: three services,
+seven participants, four weeks of daily records across day, evening and night
 shifts, seizure observations, announcements and the matching audit trail. The
 data is generated from a fixed seed, so every rebuild is identical.
 

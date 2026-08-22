@@ -20,7 +20,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('patients', function (Blueprint $table) {
+        Schema::create('participants', function (Blueprint $table) {
             $table->id();
             $table->foreignId('home_id')->constrained()->restrictOnDelete();
             $table->string('first_name');
@@ -29,26 +29,26 @@ return new class extends Migration
             $table->date('date_of_birth')->nullable();
             $table->string('status')->default('active');
             $table->text('support_summary')->nullable();
-            $table->string('accent_colour', 20)->default('#386B5A');
+            $table->string('accent_colour', 20)->default('#115E74');
             $table->timestamps();
             $table->softDeletes();
             $table->index(['home_id', 'status']);
         });
 
-        Schema::create('patient_user_assignments', function (Blueprint $table) {
+        Schema::create('participant_user_assignments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('participant_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->date('starts_on');
             $table->date('ends_on')->nullable();
             $table->timestamps();
-            $table->unique(['patient_id', 'user_id', 'starts_on']);
+            $table->unique(['participant_id', 'user_id', 'starts_on']);
             $table->index(['user_id', 'ends_on']);
         });
 
         Schema::create('shifts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('patient_id')->constrained()->restrictOnDelete();
+            $table->foreignId('participant_id')->constrained()->restrictOnDelete();
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
             $table->dateTime('starts_at');
             $table->dateTime('ends_at');
@@ -56,12 +56,12 @@ return new class extends Migration
             $table->timestamp('handover_read_at')->nullable();
             $table->timestamps();
             $table->index(['user_id', 'starts_at']);
-            $table->index(['patient_id', 'starts_at']);
+            $table->index(['participant_id', 'starts_at']);
         });
 
         Schema::create('daily_reports', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('patient_id')->constrained()->restrictOnDelete();
+            $table->foreignId('participant_id')->constrained()->restrictOnDelete();
             $table->foreignId('shift_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
             $table->date('report_date');
@@ -97,14 +97,14 @@ return new class extends Migration
             $table->timestamp('submitted_at')->nullable();
             $table->timestamps();
 
-            $table->index(['patient_id', 'report_date']);
+            $table->index(['participant_id', 'report_date']);
             $table->index(['user_id', 'report_date']);
             $table->index(['status', 'report_date']);
         });
 
         Schema::create('seizure_events', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('patient_id')->constrained()->restrictOnDelete();
+            $table->foreignId('participant_id')->constrained()->restrictOnDelete();
             $table->foreignId('daily_report_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
             $table->dateTime('occurred_at');
@@ -126,7 +126,7 @@ return new class extends Migration
             $table->string('observer_name');
             $table->timestamp('submitted_at')->nullable();
             $table->timestamps();
-            $table->index(['patient_id', 'occurred_at']);
+            $table->index(['participant_id', 'occurred_at']);
         });
 
         Schema::create('announcements', function (Blueprint $table) {
@@ -171,8 +171,8 @@ return new class extends Migration
         Schema::dropIfExists('seizure_events');
         Schema::dropIfExists('daily_reports');
         Schema::dropIfExists('shifts');
-        Schema::dropIfExists('patient_user_assignments');
-        Schema::dropIfExists('patients');
+        Schema::dropIfExists('participant_user_assignments');
+        Schema::dropIfExists('participants');
         Schema::dropIfExists('homes');
 
         Schema::table('users', function (Blueprint $table) {

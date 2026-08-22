@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Announcement;
 use App\Models\DailyReport;
-use App\Models\Patient;
+use App\Models\Participant;
 use App\Models\SeizureEvent;
 use App\Models\Shift;
 use App\Models\User;
@@ -22,18 +22,18 @@ class DashboardController extends Controller
         // Only the person rostered on sees a current shift. Managers are not on
         // the floor, so their dashboard is a service overview instead.
         $currentShift = Shift::query()
-            ->with(['patient.home', 'report'])
+            ->with(['participant.home', 'report'])
             ->where('user_id', $user->id)
             ->orderByRaw("CASE WHEN status = 'in_progress' THEN 0 WHEN status = 'scheduled' THEN 1 ELSE 2 END")
             ->orderByDesc('starts_at')
             ->first();
 
-        $patientId = $currentShift?->patient_id;
+        $participantId = $currentShift?->participant_id;
 
         $recentReports = DailyReport::query()
-            ->with(['patient.home', 'user'])
-            ->tap(fn ($query) => $this->limitToVisiblePatients($query, $user))
-            ->when($patientId, fn ($query) => $query->where('patient_id', $patientId))
+            ->with(['participant.home', 'user'])
+            ->tap(fn ($query) => $this->limitToVisibleParticipants($query, $user))
+            ->when($participantId, fn ($query) => $query->where('participant_id', $participantId))
             ->where('status', 'submitted')
             ->latest('submitted_at')
             ->limit(4)
@@ -50,13 +50,13 @@ class DashboardController extends Controller
             ? $announcement->users()->where('users.id', $user->id)->wherePivotNotNull('acknowledged_at')->exists()
             : false;
 
-        $patientCount = Patient::query()
+        $participantCount = Participant::query()
             ->visibleTo($user)
             ->where('status', 'active')
             ->count();
 
         return Inertia::render('dashboard', [
-            'patientCount' => $patientCount,
+            'participantCount' => $participantCount,
             'currentShift' => $currentShift ? [
                 'id' => $currentShift->id,
                 'starts_at' => $currentShift->starts_at->toIso8601String(),
@@ -67,7 +67,7 @@ class DashboardController extends Controller
                 'progress' => $this->shiftProgress($currentShift),
                 'report_id' => $currentShift->report?->id,
                 'report_status' => $currentShift->report?->status,
-                'patient' => $this->patientPayload($currentShift->patient),
+                'participant' => $this->participantPayload($currentShift->participant),
             ] : null,
             'recentReports' => $recentReports,
             'announcement' => $announcement ? [
@@ -84,12 +84,12 @@ class DashboardController extends Controller
                     ->whereDate('report_date', '>=', today()->startOfWeek())
                     ->count(),
                 'open_follow_ups' => DailyReport::query()
-                    ->tap(fn ($query) => $this->limitToVisiblePatients($query, $user))
+                    ->tap(fn ($query) => $this->limitToVisibleParticipants($query, $user))
                     ->where('follow_up_required', true)
                     ->where('report_date', '>=', today()->subDays(7))
                     ->count(),
                 'seizures_this_month' => SeizureEvent::query()
-                    ->tap(fn ($query) => $this->limitToVisiblePatients($query, $user))
+                    ->tap(fn ($query) => $this->limitToVisibleParticipants($query, $user))
                     ->where('occurred_at', '>=', now()->startOfMonth())
                     ->count(),
             ],
@@ -97,28 +97,28 @@ class DashboardController extends Controller
     }
 
     /**
-     * Limit a query whose model belongs to a patient to the patients this user
+     * Limit a query whose model belongs to a participant to the participants this user
      * may see. Managers see every home, so nothing is added.
      */
-    private function limitToVisiblePatients(Builder $query, User $user): void
+    private function limitToVisibleParticipants(Builder $query, User $user): void
     {
         if ($user->isManager()) {
             return;
         }
 
-        $query->whereHas('patient.users', fn ($assignment) => Patient::constrainToOpenAssignment($assignment, $user));
+        $query->whereHas('participant.users', fn ($assignment) => Participant::constrainToOpenAssignment($assignment, $user));
     }
 
-    private function patientPayload($patient): array
+    private function participantPayload($participant): array
     {
         return [
-            'id' => $patient->id,
-            'display_name' => $patient->display_name,
-            'full_name' => $patient->first_name.' '.$patient->last_name,
-            'initials' => $patient->initials,
-            'accent_colour' => $patient->accent_colour,
-            'support_summary' => $patient->support_summary,
-            'home' => $patient->home->name,
+            'id' => $participant->id,
+            'display_name' => $participant->display_name,
+            'full_name' => $participant->first_name.' '.$participant->last_name,
+            'initials' => $participant->initials,
+            'accent_colour' => $participant->accent_colour,
+            'support_summary' => $participant->support_summary,
+            'home' => $participant->home->name,
         ];
     }
 
@@ -126,10 +126,10 @@ class DashboardController extends Controller
     {
         return [
             'id' => $report->id,
-            'patient_name' => $report->patient->display_name,
-            'patient_initials' => $report->patient->initials,
-            'accent_colour' => $report->patient->accent_colour,
-            'home' => $report->patient->home->name,
+            'participant_name' => $report->participant->display_name,
+            'participant_initials' => $report->participant->initials,
+            'accent_colour' => $report->participant->accent_colour,
+            'home' => $report->participant->home->name,
             'date' => $report->report_date->format('Y-m-d'),
             'date_label' => $report->report_date->format('D, j M'),
             'shift_type' => $report->shift_type,

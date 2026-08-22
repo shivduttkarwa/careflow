@@ -6,7 +6,7 @@ use App\Models\Announcement;
 use App\Models\AuditEvent;
 use App\Models\DailyReport;
 use App\Models\Home;
-use App\Models\Patient;
+use App\Models\Participant;
 use App\Models\SeizureEvent;
 use App\Models\Shift;
 use App\Models\User;
@@ -33,20 +33,20 @@ class DemoCareSeeder extends Seeder
             'name' => 'Banksia House',
             'address' => '24 Marlow Street, Wynnum QLD 4178',
             'workers' => ['worker@careflow.test', 'worker2@careflow.test', 'worker3@careflow.test'],
-            'patients' => [
+            'participants' => [
                 [
                     'first' => 'Ellen', 'last' => 'Baptiste', 'preferred' => 'Ellie',
-                    'dob' => '1994-03-12', 'colour' => '#386B5A', 'epilepsy' => true,
+                    'dob' => '1994-03-12', 'colour' => '#115E74', 'epilepsy' => true,
                     'summary' => 'Uses a communication board to make choices. Prefers a quiet start to the morning and needs step-by-step prompting through personal care.',
                 ],
                 [
                     'first' => 'Marcus', 'last' => 'Vahey', 'preferred' => null,
-                    'dob' => '1988-11-02', 'colour' => '#4C6E8A', 'epilepsy' => false,
+                    'dob' => '1988-11-02', 'colour' => '#B12655', 'epilepsy' => false,
                     'summary' => 'Independent with meals. Requires supervision on stairs and support to plan the weekly shopping trip.',
                 ],
                 [
                     'first' => 'Tessa', 'last' => 'Whitmore', 'preferred' => 'Tess',
-                    'dob' => '2001-06-25', 'colour' => '#8A5A6E', 'epilepsy' => false,
+                    'dob' => '2001-06-25', 'colour' => '#5DA42C', 'epilepsy' => false,
                     'summary' => 'Non-verbal, communicates with gestures and a tablet. Thickened fluids at every meal as per the swallowing assessment.',
                 ],
             ],
@@ -55,15 +55,15 @@ class DemoCareSeeder extends Seeder
             'name' => 'Wattle Grove',
             'address' => '8 Kingfisher Court, Carindale QLD 4152',
             'workers' => ['worker3@careflow.test', 'worker4@careflow.test', 'worker5@careflow.test'],
-            'patients' => [
+            'participants' => [
                 [
                     'first' => 'Daniel', 'last' => 'Okoro', 'preferred' => 'Danny',
-                    'dob' => '1979-01-18', 'colour' => '#7A6A3F', 'epilepsy' => true,
+                    'dob' => '1979-01-18', 'colour' => '#156D87', 'epilepsy' => true,
                     'summary' => 'Epilepsy managed with twice daily medication. Wears a fall sensor overnight and needs a seizure chart completed for every event.',
                 ],
                 [
                     'first' => 'Sophie', 'last' => 'Tremblay', 'preferred' => 'Soph',
-                    'dob' => '1996-09-08', 'colour' => '#5F7A55', 'epilepsy' => false,
+                    'dob' => '1996-09-08', 'colour' => '#8F6C05', 'epilepsy' => false,
                     'summary' => 'Attends the community art group on Wednesdays. Needs support with money handling and travel training.',
                 ],
             ],
@@ -72,15 +72,15 @@ class DemoCareSeeder extends Seeder
             'name' => 'Kurrajong Lodge',
             'address' => '112 Ridgeway Avenue, Kedron QLD 4031',
             'workers' => ['worker5@careflow.test', 'worker6@careflow.test', 'worker2@careflow.test'],
-            'patients' => [
+            'participants' => [
                 [
                     'first' => 'Harold', 'last' => 'Simmons', 'preferred' => 'Harry',
-                    'dob' => '1962-04-30', 'colour' => '#6E5A8A', 'epilepsy' => false,
+                    'dob' => '1962-04-30', 'colour' => '#8F1C44', 'epilepsy' => false,
                     'summary' => 'Uses a four wheel walker indoors. Two person assist for transfers in and out of the shower.',
                 ],
                 [
                     'first' => 'Nadia', 'last' => 'Farouk', 'preferred' => null,
-                    'dob' => '1990-12-14', 'colour' => '#3F6E7A', 'epilepsy' => false,
+                    'dob' => '1990-12-14', 'colour' => '#104B61', 'epilepsy' => false,
                     'summary' => 'Halal diet. Prefers female support workers for personal care and enjoys reading before bed.',
                 ],
             ],
@@ -118,10 +118,10 @@ class DemoCareSeeder extends Seeder
             $manager = User::query()->where('role', 'manager')->orderBy('id')->firstOrFail();
             $workers = User::query()->where('role', 'support_worker')->orderBy('id')->get()->keyBy('email');
 
-            $careTeams = $this->createHomesAndPatients($workers, $manager);
+            $careTeams = $this->createHomesAndParticipants($workers, $manager);
 
-            foreach ($careTeams as $index => [$patient, $team, $epilepsy]) {
-                $this->createShiftHistory($patient, $team, $epilepsy, $index);
+            foreach ($careTeams as $index => [$participant, $team, $epilepsy]) {
+                $this->createShiftHistory($participant, $team, $epilepsy, $index);
             }
 
             $demoWorker = $workers[AccountSeeder::WORKER_EMAIL];
@@ -133,9 +133,9 @@ class DemoCareSeeder extends Seeder
 
     /**
      * @param  Collection<string, User>  $workers
-     * @return list<array{Patient, list<User>, bool}>
+     * @return list<array{Participant, list<User>, bool}>
      */
-    private function createHomesAndPatients(Collection $workers, User $manager): array
+    private function createHomesAndParticipants(Collection $workers, User $manager): array
     {
         $careTeams = [];
 
@@ -151,20 +151,20 @@ class DemoCareSeeder extends Seeder
                 $homeData['workers'],
             );
 
-            foreach ($homeData['patients'] as $patientData) {
-                $patient = Patient::create([
+            foreach ($homeData['participants'] as $participantData) {
+                $participant = Participant::create([
                     'home_id' => $home->id,
-                    'first_name' => $patientData['first'],
-                    'last_name' => $patientData['last'],
-                    'preferred_name' => $patientData['preferred'],
-                    'date_of_birth' => $patientData['dob'],
+                    'first_name' => $participantData['first'],
+                    'last_name' => $participantData['last'],
+                    'preferred_name' => $participantData['preferred'],
+                    'date_of_birth' => $participantData['dob'],
                     'status' => 'active',
-                    'support_summary' => $patientData['summary'],
-                    'accent_colour' => $patientData['colour'],
+                    'support_summary' => $participantData['summary'],
+                    'accent_colour' => $participantData['colour'],
                 ]);
 
                 foreach ($team as $worker) {
-                    $patient->users()->attach($worker->id, [
+                    $participant->users()->attach($worker->id, [
                         'starts_on' => today()->subDays(90),
                         'ends_on' => null,
                     ]);
@@ -172,16 +172,16 @@ class DemoCareSeeder extends Seeder
 
                 AuditEvent::create([
                     'user_id' => $manager->id,
-                    'auditable_type' => Patient::class,
-                    'auditable_id' => $patient->id,
+                    'auditable_type' => Participant::class,
+                    'auditable_id' => $participant->id,
                     'event' => 'created',
-                    'new_values' => $patient->only(['first_name', 'last_name', 'preferred_name', 'home_id']),
+                    'new_values' => $participant->only(['first_name', 'last_name', 'preferred_name', 'home_id']),
                     'ip_address' => '203.0.113.24',
-                    'user_agent' => 'CareFlow demo seed',
+                    'user_agent' => 'Ignite care portal demo seed',
                     'created_at' => now()->subDays(90),
                 ]);
 
-                $careTeams[] = [$patient, $team, $patientData['epilepsy']];
+                $careTeams[] = [$participant, $team, $participantData['epilepsy']];
             }
         }
 
@@ -191,7 +191,7 @@ class DemoCareSeeder extends Seeder
     /**
      * @param  list<User>  $team
      */
-    private function createShiftHistory(Patient $patient, array $team, bool $epilepsy, int $rotationOffset): void
+    private function createShiftHistory(Participant $participant, array $team, bool $epilepsy, int $rotationOffset): void
     {
         $firstDay = today()->subDays(self::DAYS_OF_HISTORY - 1);
         $rotation = $rotationOffset;
@@ -206,31 +206,31 @@ class DemoCareSeeder extends Seeder
                 $rotation++;
 
                 if ($startsAt->isFuture()) {
-                    $this->createShift($patient, $worker, $startsAt, $endsAt, 'scheduled');
+                    $this->createShift($participant, $worker, $startsAt, $endsAt, 'scheduled');
 
                     continue;
                 }
 
                 if ($endsAt->isFuture()) {
-                    $this->createShift($patient, $worker, $startsAt, $endsAt, 'in_progress');
+                    $this->createShift($participant, $worker, $startsAt, $endsAt, 'in_progress');
 
                     continue;
                 }
 
-                $shift = $this->createShift($patient, $worker, $startsAt, $endsAt, 'completed');
-                $report = $this->createReport($patient, $worker, $shift, $date, $pattern['type']);
+                $shift = $this->createShift($participant, $worker, $startsAt, $endsAt, 'completed');
+                $report = $this->createReport($participant, $worker, $shift, $date, $pattern['type']);
 
                 if ($epilepsy && $this->narrative->chance(16)) {
-                    $this->createSeizureEvents($patient, $worker, $report, $startsAt, $endsAt);
+                    $this->createSeizureEvents($participant, $worker, $report, $startsAt, $endsAt);
                 }
             }
         }
     }
 
-    private function createShift(Patient $patient, User $worker, CarbonInterface $startsAt, CarbonInterface $endsAt, string $status): Shift
+    private function createShift(Participant $participant, User $worker, CarbonInterface $startsAt, CarbonInterface $endsAt, string $status): Shift
     {
         return Shift::create([
-            'patient_id' => $patient->id,
+            'participant_id' => $participant->id,
             'user_id' => $worker->id,
             'starts_at' => $startsAt,
             'ends_at' => $endsAt,
@@ -239,13 +239,13 @@ class DemoCareSeeder extends Seeder
         ]);
     }
 
-    private function createReport(Patient $patient, User $worker, Shift $shift, CarbonInterface $date, string $shiftType): DailyReport
+    private function createReport(Participant $participant, User $worker, Shift $shift, CarbonInterface $date, string $shiftType): DailyReport
     {
         $submittedAt = $shift->ends_at->subMinutes($this->narrative->between(5, 45));
 
         $report = DailyReport::create([
             ...$this->reportAttributes($shiftType),
-            'patient_id' => $patient->id,
+            'participant_id' => $participant->id,
             'shift_id' => $shift->id,
             'user_id' => $worker->id,
             'report_date' => $date,
@@ -263,7 +263,7 @@ class DemoCareSeeder extends Seeder
             'event' => 'submitted',
             'new_values' => ['status' => 'submitted'],
             'ip_address' => '203.0.113.'.$this->narrative->between(2, 250),
-            'user_agent' => 'CareFlow demo seed',
+            'user_agent' => 'Ignite care portal demo seed',
             'created_at' => $submittedAt,
         ]);
 
@@ -374,7 +374,7 @@ class DemoCareSeeder extends Seeder
         ];
     }
 
-    private function createSeizureEvents(Patient $patient, User $worker, DailyReport $report, CarbonInterface $startsAt, CarbonInterface $endsAt): void
+    private function createSeizureEvents(Participant $participant, User $worker, DailyReport $report, CarbonInterface $startsAt, CarbonInterface $endsAt): void
     {
         $narrative = $this->narrative;
         $count = $narrative->chance(20) ? 2 : 1;
@@ -385,7 +385,7 @@ class DemoCareSeeder extends Seeder
             $injured = $fell && $narrative->chance(30);
 
             SeizureEvent::create([
-                'patient_id' => $patient->id,
+                'participant_id' => $participant->id,
                 'daily_report_id' => $report->id,
                 'user_id' => $worker->id,
                 'occurred_at' => $occurredAt,
@@ -414,10 +414,10 @@ class DemoCareSeeder extends Seeder
      * Hand the shift that is running right now to the demo login so the
      * dashboard opens on a live shift with the daily note still to write.
      */
-    private function spotlightCurrentShift(Patient $patient, User $worker): void
+    private function spotlightCurrentShift(Participant $participant, User $worker): void
     {
         Shift::query()
-            ->where('patient_id', $patient->id)
+            ->where('participant_id', $participant->id)
             ->where('status', 'in_progress')
             ->update(['user_id' => $worker->id]);
     }

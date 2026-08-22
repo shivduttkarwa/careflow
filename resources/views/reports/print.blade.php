@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Daily Care Record – {{ $report->patient->display_name }} – {{ $report->report_date->format('Y-m-d') }}</title>
+    <title>Daily Care Record – {{ $report->participant->display_name }} – {{ $report->report_date->format('Y-m-d') }}</title>
     @include('reports.partials.styles')
 </head>
 <body>

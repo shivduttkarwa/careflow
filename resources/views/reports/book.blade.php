@@ -13,14 +13,14 @@
     </div>
 
     @if($truncated)
-        <div class="notice"><strong>Showing the first {{ $reports->count() }} records of {{ $total }}.</strong><br>Narrow the date range or filter by patient to include the rest.</div>
+        <div class="notice"><strong>Showing the first {{ $reports->count() }} records of {{ $total }}.</strong><br>Narrow the date range or filter by participant to include the rest.</div>
     @endif
 
     @forelse($reports as $report)
         @include('reports.partials.record', ['report' => $report])
     @empty
         <article class="page">
-            <header><div><div class="brand">CareFlow · Secure care record</div><h1>Care book</h1></div></header>
+            <header><div><div class="brand">Ignite Community Services · Secure care record</div><h1>Care book</h1></div></header>
             <section><p>No care records match the selected filters.</p></section>
         </article>
     @endforelse

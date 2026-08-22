@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\DailyReport;
 use App\Models\Home;
-use App\Models\Patient;
+use App\Models\Participant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -23,14 +23,14 @@ class ReportExportTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('reports.data', 1)
-                ->where('reports.data.0.patient', $banksia->display_name)
+                ->where('reports.data.0.participant', $banksia->display_name)
                 ->has('homes', 2));
 
         $this->actingAs($this->manager())
             ->get(route('reports.index', ['home' => $wattle->home_id]))
             ->assertInertia(fn (Assert $page) => $page
                 ->has('reports.data', 1)
-                ->where('reports.data.0.patient', $wattle->display_name));
+                ->where('reports.data.0.participant', $wattle->display_name));
     }
 
     public function test_csv_export_returns_the_filtered_records(): void
@@ -53,7 +53,7 @@ class ReportExportTest extends TestCase
         $this->assertDatabaseHas('audit_events', ['event' => 'exported-csv']);
     }
 
-    public function test_csv_export_never_leaks_patients_a_worker_is_not_assigned_to(): void
+    public function test_csv_export_never_leaks_participants_a_worker_is_not_assigned_to(): void
     {
         [$assigned, $unassigned] = $this->twoHomes();
 
@@ -89,28 +89,28 @@ class ReportExportTest extends TestCase
     }
 
     /**
-     * Two patients in two different homes, each with one submitted report.
+     * Two participants in two different homes, each with one submitted report.
      *
-     * @return array{Patient, Patient}
+     * @return array{Participant, Participant}
      */
     private function twoHomes(): array
     {
         $worker = User::factory()->create(['role' => 'support_worker']);
 
-        $patients = collect([
+        $participants = collect([
             ['Banksia House', 'Ava', 'Mitchell'],
             ['Wattle Grove', 'Noah', 'Fitzgerald'],
-        ])->map(function (array $row) use ($worker): Patient {
+        ])->map(function (array $row) use ($worker): Participant {
             [$homeName, $firstName, $lastName] = $row;
 
-            $patient = Patient::create([
+            $participant = Participant::create([
                 'home_id' => Home::create(['name' => $homeName])->id,
                 'first_name' => $firstName,
                 'last_name' => $lastName,
             ]);
 
             DailyReport::create([
-                'patient_id' => $patient->id,
+                'participant_id' => $participant->id,
                 'user_id' => $worker->id,
                 'report_date' => today(),
                 'shift_type' => 'day',
@@ -122,9 +122,9 @@ class ReportExportTest extends TestCase
                 'submitted_at' => now(),
             ]);
 
-            return $patient;
+            return $participant;
         });
 
-        return [$patients[0], $patients[1]];
+        return [$participants[0], $participants[1]];
     }
 }
