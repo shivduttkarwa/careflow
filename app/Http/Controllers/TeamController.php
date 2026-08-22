@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\AuditEvent;
+use App\Models\Home;
 use App\Models\Participant;
 use App\Models\User;
 use Carbon\Carbon;
@@ -46,15 +47,19 @@ class TeamController extends Controller
                     ? Carbon::parse($member->last_report_date)->format('j M Y')
                     : null,
             ]),
-            'participants' => Participant::query()
-                ->with('home')
-                ->where('status', 'active')
-                ->orderBy('first_name')
+            'facilities' => Home::query()
+                ->whereHas('participants', fn ($query) => $query->where('status', 'active'))
+                ->with(['participants' => fn ($query) => $query->where('status', 'active')->orderBy('first_name')])
+                ->orderBy('name')
                 ->get()
-                ->map(fn (Participant $participant) => [
-                    'id' => $participant->id,
-                    'name' => $participant->display_name,
-                    'home' => $participant->home->name,
+                ->map(fn (Home $home) => [
+                    'id' => $home->id,
+                    'name' => $home->name,
+                    'address' => $home->address,
+                    'participants' => $home->participants->map(fn (Participant $participant) => [
+                        'id' => $participant->id,
+                        'name' => $participant->display_name,
+                    ])->values(),
                 ]),
         ]);
     }

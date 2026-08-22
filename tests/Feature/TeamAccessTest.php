@@ -8,6 +8,7 @@ use App\Models\Participant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class TeamAccessTest extends TestCase
@@ -42,6 +43,49 @@ class TeamAccessTest extends TestCase
             'password' => 'demo-password-12',
             'password_confirmation' => 'demo-password-12',
         ])->assertForbidden();
+    }
+
+    public function test_team_access_lists_every_facility_with_its_participants(): void
+    {
+        $banksia = Home::create(['name' => 'Banksia House', 'address' => '24 Marlow Street']);
+        $wattle = Home::create(['name' => 'Wattle Grove']);
+        Home::create(['name' => 'Empty Lodge']);
+
+        Participant::create(['home_id' => $banksia->id, 'first_name' => 'Ava', 'last_name' => 'Mitchell', 'status' => 'active']);
+        Participant::create(['home_id' => $banksia->id, 'first_name' => 'Bo', 'last_name' => 'Reyes', 'status' => 'active']);
+        Participant::create(['home_id' => $wattle->id, 'first_name' => 'Cleo', 'last_name' => 'Nunn', 'status' => 'active']);
+        Participant::create(['home_id' => $wattle->id, 'first_name' => 'Gone', 'last_name' => 'Away', 'status' => 'discharged']);
+
+        $this->actingAs($this->manager())
+            ->get(route('team.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('team/index')
+                ->has('facilities', 2)
+                ->where('facilities.0.name', 'Banksia House')
+                ->where('facilities.0.address', '24 Marlow Street')
+                ->has('facilities.0.participants', 2)
+                ->where('facilities.1.name', 'Wattle Grove')
+                ->has('facilities.1.participants', 1)
+            );
+    }
+
+    public function test_manager_grants_a_worker_every_participant_in_a_facility(): void
+    {
+        $home = Home::create(['name' => 'Kurrajong Lodge']);
+        $first = Participant::create(['home_id' => $home->id, 'first_name' => 'Harry', 'last_name' => 'Simmons']);
+        $second = Participant::create(['home_id' => $home->id, 'first_name' => 'Nadia', 'last_name' => 'Farouk']);
+        $elsewhere = $this->participant();
+        $worker = User::factory()->create(['role' => 'support_worker']);
+
+        $this->actingAs($this->manager())
+            ->put(route('team.assignments', $worker), ['participants' => [$first->id, $second->id]])
+            ->assertRedirect();
+
+        $worker = $worker->fresh();
+
+        $this->assertTrue($worker->can('view', $first));
+        $this->assertTrue($worker->can('view', $second));
+        $this->assertFalse($worker->can('view', $elsewhere));
     }
 
     public function test_manager_creates_a_worker_with_participant_access(): void

@@ -1,17 +1,50 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { ArrowRight, KeyRound, Mail } from 'lucide-react';
+import {
+    ArrowRight,
+    KeyRound,
+    Mail,
+    ShieldCheck,
+    UserRound,
+} from 'lucide-react';
+import { useState } from 'react';
 import InputError from '@/components/input-error';
 import PasskeyVerify from '@/components/passkey-verify';
 import PasswordInput from '@/components/password-input';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
+type DemoAccount = {
+    name: string;
+    email: string;
+    role: string;
+    password: string;
+};
+
 type Props = {
     status?: string;
     canResetPassword: boolean;
+    demoAccounts?: DemoAccount[];
 };
 
-export default function Login({ status, canResetPassword }: Props) {
+const roleLabels: Record<string, string> = {
+    manager: 'Manager',
+    administrator: 'Administrator',
+    support_worker: 'Support worker',
+};
+
+export default function Login({
+    status,
+    canResetPassword,
+    demoAccounts = [],
+}: Props) {
+    const [email, setEmail] = useState(demoAccounts[0]?.email ?? '');
+    const [password, setPassword] = useState(demoAccounts[0]?.password ?? '');
+
+    const fillFrom = (account: DemoAccount) => {
+        setEmail(account.email);
+        setPassword(account.password);
+    };
+
     return (
         <>
             <Head title="Sign in" />
@@ -42,6 +75,10 @@ export default function Login({ status, canResetPassword }: Props) {
                                     autoFocus
                                     autoComplete="email"
                                     placeholder="you@service.com.au"
+                                    value={email}
+                                    onChange={(event) =>
+                                        setEmail(event.target.value)
+                                    }
                                     className="care-field bg-white pr-3 pl-10"
                                 />
                             </div>
@@ -67,6 +104,10 @@ export default function Login({ status, canResetPassword }: Props) {
                                     name="password"
                                     required
                                     autoComplete="current-password"
+                                    value={password}
+                                    onChange={(event) =>
+                                        setPassword(event.target.value)
+                                    }
                                     className="h-12 rounded-lg border-line bg-white pr-10 pl-10 shadow-none focus-visible:border-brand-500 focus-visible:ring-brand-100"
                                 />
                             </div>
@@ -79,7 +120,7 @@ export default function Login({ status, canResetPassword }: Props) {
                                 name="remember"
                                 value="1"
                                 className="size-4 rounded border-ink-200 accent-brand-700"
-                            />{' '}
+                            />
                             Keep me signed in on this device
                         </label>
 
@@ -98,15 +139,60 @@ export default function Login({ status, canResetPassword }: Props) {
                 )}
             </Form>
 
-            <div className="mt-6 rounded-xl border border-line-soft bg-surface p-4">
-                <p className="text-[10px] font-bold tracking-[0.08em] text-ink-400 uppercase">
-                    MVP demo account
-                </p>
-                <p className="mt-1.5 text-xs leading-5 text-ink-500">
-                    The support-worker credentials are pre-filled. Select “Sign
-                    in securely” to explore the care workflow.
-                </p>
-            </div>
+            {demoAccounts.length > 0 && (
+                <div className="mt-6 rounded-xl border border-line-soft bg-surface p-4">
+                    <p className="text-[10px] font-bold tracking-[0.08em] text-ink-400 uppercase">
+                        MVP demo accounts
+                    </p>
+                    <p className="mt-1.5 text-xs leading-5 text-ink-500">
+                        Select an account to fill the form, then sign in.
+                        Managers see every service; support workers see only the
+                        participants they are assigned.
+                    </p>
+
+                    <div className="mt-3 max-h-56 space-y-1.5 overflow-y-auto pr-0.5">
+                        {demoAccounts.map((account) => {
+                            const active = account.email === email;
+                            const isManager = account.role !== 'support_worker';
+
+                            return (
+                                <button
+                                    key={account.email}
+                                    type="button"
+                                    onClick={() => fillFrom(account)}
+                                    className={`flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition ${
+                                        active
+                                            ? 'border-brand-300 bg-white shadow-card'
+                                            : 'border-transparent hover:border-line hover:bg-white'
+                                    }`}
+                                >
+                                    <span
+                                        className={`grid size-7 shrink-0 place-items-center rounded-lg text-white ${isManager ? 'bg-accent-600' : 'bg-brand-700'}`}
+                                    >
+                                        {isManager ? (
+                                            <ShieldCheck className="size-3.5" />
+                                        ) : (
+                                            <UserRound className="size-3.5" />
+                                        )}
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block truncate text-xs font-semibold text-ink-900">
+                                            {account.name}
+                                        </span>
+                                        <span className="block truncate text-[10px] text-ink-400">
+                                            {account.email}
+                                        </span>
+                                    </span>
+                                    <span className="pill-neutral shrink-0">
+                                        {roleLabels[account.role] ??
+                                            account.role}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
         </>
     );
 }

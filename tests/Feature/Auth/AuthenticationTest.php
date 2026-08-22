@@ -3,8 +3,10 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use Database\Seeders\AccountSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
+use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
 
@@ -17,6 +19,51 @@ class AuthenticationTest extends TestCase
         $response = $this->get(route('login'));
 
         $response->assertOk();
+    }
+
+    public function test_the_login_screen_offers_every_seeded_demo_account()
+    {
+        config(['app.demo_logins' => true]);
+        $this->seed(AccountSeeder::class);
+
+        $this->get(route('login'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('auth/login')
+                ->has('demoAccounts', count(AccountSeeder::ACCOUNTS))
+                ->where('demoAccounts.0.email', AccountSeeder::MANAGER_EMAIL)
+                ->where('demoAccounts.0.role', 'manager')
+                ->where('demoAccounts.0.password', AccountSeeder::DEMO_PASSWORD)
+            );
+
+        $this->post(route('login.store'), [
+            'email' => AccountSeeder::MANAGER_EMAIL,
+            'password' => AccountSeeder::DEMO_PASSWORD,
+        ])->assertRedirect(route('dashboard', absolute: false));
+
+        $this->assertAuthenticated();
+    }
+
+    public function test_demo_accounts_are_withheld_when_the_flag_is_off()
+    {
+        config(['app.demo_logins' => false]);
+        $this->seed(AccountSeeder::class);
+
+        $this->get(route('login'))
+            ->assertInertia(fn (Assert $page) => $page->has('demoAccounts', 0));
+    }
+
+    public function test_the_flag_alone_decides_demo_accounts_in_production()
+    {
+        $this->seed(AccountSeeder::class);
+        $this->app->detectEnvironment(fn () => 'production');
+
+        config(['app.demo_logins' => false]);
+        $this->get(route('login'))
+            ->assertInertia(fn (Assert $page) => $page->has('demoAccounts', 0));
+
+        config(['app.demo_logins' => true]);
+        $this->get(route('login'))
+            ->assertInertia(fn (Assert $page) => $page->has('demoAccounts', count(AccountSeeder::ACCOUNTS)));
     }
 
     public function test_users_can_authenticate_using_the_login_screen()

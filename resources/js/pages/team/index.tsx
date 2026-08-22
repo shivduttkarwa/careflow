@@ -1,15 +1,17 @@
 import { Form, Head, router } from '@inertiajs/react';
 import {
+    Building2,
     CheckCircle2,
     LoaderCircle,
     Lock,
     Mail,
+    MapPin,
     ShieldCheck,
     UserRound,
     UserRoundPlus,
     Users,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import CareSelect from '@/components/care-select';
 import InputError from '@/components/input-error';
 
@@ -24,12 +26,34 @@ type Member = {
     last_report_date: string | null;
 };
 
-type ParticipantOption = { id: number; name: string; home: string };
+type Facility = {
+    id: number;
+    name: string;
+    address: string | null;
+    participants: { id: number; name: string }[];
+};
 
-type Props = { members: Member[]; participants: ParticipantOption[] };
+type Props = { members: Member[]; facilities: Facility[] };
 
-export default function TeamAccess({ members, participants }: Props) {
+type Coverage = 'none' | 'partial' | 'all';
+
+function coverageOf(facility: Facility, selected: number[]): Coverage {
+    const covered = facility.participants.filter((participant) =>
+        selected.includes(participant.id),
+    ).length;
+
+    if (covered === 0) {
+        return 'none';
+    }
+
+    return covered === facility.participants.length ? 'all' : 'partial';
+}
+
+export default function TeamAccess({ members, facilities }: Props) {
     const [role, setRole] = useState('support_worker');
+    const [newMemberParticipants, setNewMemberParticipants] = useState<
+        number[]
+    >([]);
 
     return (
         <>
@@ -46,8 +70,8 @@ export default function TeamAccess({ members, participants }: Props) {
                     </h1>
                     <p className="mt-2 max-w-2xl text-base leading-7 text-ink-500">
                         Accounts are created here — staff cannot sign themselves
-                        up. Each support worker only sees the participants you
-                        give them access to.
+                        up. Give a support worker a whole facility, or pick
+                        individual participants within one.
                     </p>
                 </header>
 
@@ -57,7 +81,7 @@ export default function TeamAccess({ members, participants }: Props) {
                             <MemberCard
                                 key={member.id}
                                 member={member}
-                                participants={participants}
+                                facilities={facilities}
                             />
                         ))}
                     </section>
@@ -67,7 +91,10 @@ export default function TeamAccess({ members, participants }: Props) {
                             action="/team"
                             method="post"
                             resetOnSuccess
-                            onSuccess={() => setRole('support_worker')}
+                            onSuccess={() => {
+                                setRole('support_worker');
+                                setNewMemberParticipants([]);
+                            }}
                             className="care-card p-5 sm:p-6"
                         >
                             {({ processing, errors }) => (
@@ -75,10 +102,10 @@ export default function TeamAccess({ members, participants }: Props) {
                                     <div className="grid size-11 place-items-center rounded-xl bg-brand-100 text-brand-700">
                                         <UserRoundPlus className="size-5" />
                                     </div>
-                                    <h2 className="mt-4 text-base font-semibold tracking-[-0.01em]">
+                                    <h2 className="mt-4 text-base font-semibold tracking-[-0.025em]">
                                         Add a team member
                                     </h2>
-                                    <p className="mt-1.5 text-sm leading-6 text-ink-500">
+                                    <p className="mt-1.5 text-xs leading-5 text-ink-500">
                                         They can sign in straight away with the
                                         password you set.
                                     </p>
@@ -130,12 +157,12 @@ export default function TeamAccess({ members, participants }: Props) {
                                                     {
                                                         value: 'support_worker',
                                                         label: 'Support worker',
-                                                        hint: 'Sees only assigned participants',
+                                                        hint: 'Sees only assigned facilities',
                                                     },
                                                     {
                                                         value: 'manager',
                                                         label: 'Manager',
-                                                        hint: 'Full access to every record',
+                                                        hint: 'Full access to every facility',
                                                     },
                                                 ]}
                                             />
@@ -174,44 +201,38 @@ export default function TeamAccess({ members, participants }: Props) {
                                             />
                                         </label>
 
-                                        {participants.length > 0 && (
-                                            <fieldset>
-                                                <legend className="care-label">
-                                                    Participant access
-                                                </legend>
-                                                <div className="max-h-52 space-y-1.5 overflow-y-auto rounded-lg border border-line bg-surface-soft p-2.5">
-                                                    {participants.map(
-                                                        (participant) => (
-                                                            <label
-                                                                key={
-                                                                    participant.id
-                                                                }
-                                                                className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-xs transition hover:bg-white"
-                                                            >
-                                                                <input
-                                                                    type="checkbox"
-                                                                    name="participants[]"
-                                                                    value={
-                                                                        participant.id
-                                                                    }
-                                                                    className="size-4 accent-brand-700"
-                                                                />
-                                                                <span className="font-medium text-ink-700">
-                                                                    {
-                                                                        participant.name
-                                                                    }
-                                                                </span>
-                                                                <span className="ml-auto text-[10px] text-ink-400">
-                                                                    {
-                                                                        participant.home
-                                                                    }
-                                                                </span>
-                                                            </label>
+                                        {role === 'support_worker' &&
+                                            facilities.length > 0 && (
+                                                <fieldset>
+                                                    <legend className="care-label">
+                                                        Facility access
+                                                    </legend>
+                                                    <div className="max-h-72 overflow-y-auto rounded-xl border border-line bg-surface-soft p-2.5">
+                                                        <FacilityPicker
+                                                            facilities={
+                                                                facilities
+                                                            }
+                                                            selected={
+                                                                newMemberParticipants
+                                                            }
+                                                            onChange={
+                                                                setNewMemberParticipants
+                                                            }
+                                                            compact
+                                                        />
+                                                    </div>
+                                                    {newMemberParticipants.map(
+                                                        (id) => (
+                                                            <input
+                                                                key={id}
+                                                                type="hidden"
+                                                                name="participants[]"
+                                                                value={id}
+                                                            />
                                                         ),
                                                     )}
-                                                </div>
-                                            </fieldset>
-                                        )}
+                                                </fieldset>
+                                            )}
                                     </div>
 
                                     <button
@@ -244,12 +265,134 @@ export default function TeamAccess({ members, participants }: Props) {
     );
 }
 
+function FacilityPicker({
+    facilities,
+    selected,
+    onChange,
+    compact = false,
+}: {
+    facilities: Facility[];
+    selected: number[];
+    onChange: (next: number[]) => void;
+    compact?: boolean;
+}) {
+    const toggleParticipant = (id: number) =>
+        onChange(
+            selected.includes(id)
+                ? selected.filter((value) => value !== id)
+                : [...selected, id],
+        );
+
+    const toggleFacility = (facility: Facility) => {
+        const ids = facility.participants.map((participant) => participant.id);
+
+        onChange(
+            coverageOf(facility, selected) === 'all'
+                ? selected.filter((id) => !ids.includes(id))
+                : [...selected.filter((id) => !ids.includes(id)), ...ids],
+        );
+    };
+
+    return (
+        <div className={compact ? 'space-y-2.5' : 'space-y-3'}>
+            {facilities.map((facility) => {
+                const coverage = coverageOf(facility, selected);
+
+                return (
+                    <div
+                        key={facility.id}
+                        className={`rounded-xl border transition ${
+                            coverage === 'none'
+                                ? 'border-line bg-white'
+                                : 'border-brand-200 bg-brand-50'
+                        }`}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => toggleFacility(facility)}
+                            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left"
+                        >
+                            <span
+                                className={`grid size-7 shrink-0 place-items-center rounded-lg transition ${
+                                    coverage === 'all'
+                                        ? 'bg-brand-700 text-white'
+                                        : coverage === 'partial'
+                                          ? 'bg-brand-100 text-brand-800'
+                                          : 'bg-ink-100 text-ink-400'
+                                }`}
+                            >
+                                <Building2 className="size-3.5" />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span className="block truncate text-xs font-semibold text-ink-900">
+                                    {facility.name}
+                                </span>
+                                {!compact && facility.address && (
+                                    <span className="mt-0.5 flex items-center gap-1 text-[10px] text-ink-400">
+                                        <MapPin className="size-2.5 shrink-0" />
+                                        <span className="truncate">
+                                            {facility.address}
+                                        </span>
+                                    </span>
+                                )}
+                            </span>
+                            <span
+                                className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-[0.05em] uppercase ${
+                                    coverage === 'all'
+                                        ? 'bg-grow-100 text-grow-700'
+                                        : coverage === 'partial'
+                                          ? 'bg-warn-100 text-warn-700'
+                                          : 'bg-ink-100 text-ink-400'
+                                }`}
+                            >
+                                {coverage === 'all'
+                                    ? 'Full facility'
+                                    : coverage === 'partial'
+                                      ? `${facility.participants.filter((participant) => selected.includes(participant.id)).length}/${facility.participants.length}`
+                                      : 'No access'}
+                            </span>
+                        </button>
+
+                        <div className="flex flex-wrap gap-1.5 border-t border-line-soft px-3 py-2.5">
+                            {facility.participants.map((participant) => {
+                                const active = selected.includes(
+                                    participant.id,
+                                );
+
+                                return (
+                                    <button
+                                        key={participant.id}
+                                        type="button"
+                                        onClick={() =>
+                                            toggleParticipant(participant.id)
+                                        }
+                                        className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                                            active
+                                                ? 'border-brand-400 bg-white text-brand-800'
+                                                : 'border-line bg-white text-ink-400 hover:border-brand-200'
+                                        }`}
+                                    >
+                                        {active && (
+                                            <CheckCircle2 className="size-3" />
+                                        )}
+                                        {participant.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 function MemberCard({
     member,
-    participants,
+    facilities,
 }: {
     member: Member;
-    participants: ParticipantOption[];
+    facilities: Facility[];
 }) {
     const [selected, setSelected] = useState<number[]>(member.participant_ids);
     const [saving, setSaving] = useState(false);
@@ -258,12 +401,16 @@ function MemberCard({
         selected.length !== member.participant_ids.length ||
         selected.some((id) => !member.participant_ids.includes(id));
 
-    const toggle = (id: number) =>
-        setSelected((current) =>
-            current.includes(id)
-                ? current.filter((value) => value !== id)
-                : [...current, id],
-        );
+    const savedFacilities = useMemo(
+        () =>
+            facilities
+                .map((facility) => ({
+                    facility,
+                    coverage: coverageOf(facility, member.participant_ids),
+                }))
+                .filter(({ coverage }) => coverage !== 'none'),
+        [facilities, member.participant_ids],
+    );
 
     const save = () => {
         setSaving(true);
@@ -291,7 +438,7 @@ function MemberCard({
                 </div>
                 <div className="min-w-0">
                     <h2 className="text-sm font-semibold">{member.name}</h2>
-                    <p className="mt-0.5 truncate text-xs text-ink-400">
+                    <p className="mt-0.5 truncate text-[11px] text-ink-400">
                         {member.email}
                     </p>
                 </div>
@@ -300,7 +447,7 @@ function MemberCard({
                 </span>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-400">
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-ink-400">
                 <span>
                     <span className="font-semibold text-ink-700">
                         {member.submitted_reports_count}
@@ -313,53 +460,40 @@ function MemberCard({
                         ? `Last record ${member.last_report_date}`
                         : 'No records yet'}
                 </span>
+                {!member.is_manager && (
+                    <>
+                        <span>·</span>
+                        <span>
+                            {savedFacilities.length === 0
+                                ? 'No facility'
+                                : `${savedFacilities.length} of ${facilities.length} facilities`}
+                        </span>
+                    </>
+                )}
             </div>
 
             {member.is_manager ? (
-                <p className="mt-4 flex items-center gap-2 rounded-lg bg-surface px-3.5 py-3 text-xs text-ink-500">
+                <p className="mt-4 flex items-center gap-2 rounded-xl bg-surface px-3.5 py-3 text-[11px] text-ink-500">
                     <Users className="size-3.5 shrink-0 text-ink-400" />{' '}
-                    Managers can see every participant across all services.
+                    Managers can see every participant across all facilities.
                 </p>
             ) : (
                 <div className="mt-4 border-t border-line-soft pt-4">
                     <div className="mb-2.5 flex items-center gap-2 text-[10px] font-bold tracking-[0.08em] text-ink-400 uppercase">
                         <UserRound className="size-3.5 text-brand-600" />{' '}
-                        Participant access
+                        Facility &amp; participant access
                     </div>
 
-                    {participants.length === 0 ? (
-                        <p className="text-sm text-ink-400">
+                    {facilities.length === 0 ? (
+                        <p className="text-xs text-ink-400">
                             Add a participant before granting access.
                         </p>
                     ) : (
-                        <div className="flex flex-wrap gap-2">
-                            {participants.map((participant) => {
-                                const active = selected.includes(
-                                    participant.id,
-                                );
-
-                                return (
-                                    <button
-                                        key={participant.id}
-                                        type="button"
-                                        onClick={() => toggle(participant.id)}
-                                        className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
-                                            active
-                                                ? 'border-brand-400 bg-brand-50 text-brand-800'
-                                                : 'border-line bg-white text-ink-400 hover:border-brand-200'
-                                        }`}
-                                    >
-                                        {active && (
-                                            <CheckCircle2 className="size-3.5" />
-                                        )}
-                                        {participant.name}
-                                        <span className="font-normal opacity-70">
-                                            {participant.home}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                        <FacilityPicker
+                            facilities={facilities}
+                            selected={selected}
+                            onChange={setSelected}
+                        />
                     )}
 
                     {dirty && (
@@ -380,7 +514,7 @@ function MemberCard({
                                 onClick={() =>
                                     setSelected(member.participant_ids)
                                 }
-                                className="text-xs font-semibold text-ink-400 hover:text-ink-700"
+                                className="text-[11px] font-semibold text-ink-400 hover:text-ink-700"
                             >
                                 Undo
                             </button>

@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\User;
+use Database\Seeders\AccountSeeder;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -51,6 +53,7 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::loginView(fn (Request $request) => Inertia::render('auth/login', [
             'canResetPassword' => Features::enabled(Features::resetPasswords()),
             'status' => $request->session()->get('status'),
+            'demoAccounts' => $this->demoAccounts(),
         ]));
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [
@@ -74,6 +77,34 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));
 
         Fortify::confirmPasswordView(fn () => Inertia::render('auth/confirm-password'));
+    }
+
+    /**
+     * The seeded logins offered as one-click sign in. Hands out the shared
+     * demo password, so it stays behind the demo_logins flag.
+     *
+     * @return array<int, array{name: string, email: string, role: string, password: string}>
+     */
+    private function demoAccounts(): array
+    {
+        if (! config('app.demo_logins')) {
+            return [];
+        }
+
+        $seeded = User::query()
+            ->whereIn('email', array_column(AccountSeeder::ACCOUNTS, 1))
+            ->pluck('role', 'email');
+
+        return collect(AccountSeeder::ACCOUNTS)
+            ->filter(fn (array $account): bool => $seeded->has($account[1]))
+            ->map(fn (array $account): array => [
+                'name' => $account[0],
+                'email' => $account[1],
+                'role' => (string) $seeded[$account[1]],
+                'password' => AccountSeeder::DEMO_PASSWORD,
+            ])
+            ->values()
+            ->all();
     }
 
     /**
