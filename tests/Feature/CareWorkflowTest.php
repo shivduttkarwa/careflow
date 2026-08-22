@@ -155,7 +155,7 @@ class CareWorkflowTest extends TestCase
         $this->assertDatabaseCount('participants', 7);
         $this->assertDatabaseCount('announcements', 3);
 
-        $this->assertGreaterThan(400, DailyReport::count());
+        $this->assertGreaterThan(20, DailyReport::count());
         $this->assertGreaterThan(0, SeizureEvent::count());
         $this->assertSame(1, DailyReport::where('status', 'draft')->count());
 
@@ -197,9 +197,21 @@ class CareWorkflowTest extends TestCase
     {
         $this->seed();
 
+        // The demo history is deliberately short, so add a record outside the
+        // current week to prove the dashboard filters rather than counts all.
+        $recent = DailyReport::latest('id')->firstOrFail();
+        DailyReport::create([
+            'participant_id' => $recent->participant_id,
+            'user_id' => $recent->user_id,
+            'report_date' => today()->startOfWeek()->subWeeks(3),
+            'shift_type' => 'day',
+            'status' => 'submitted',
+            'submitted_at' => now(),
+        ]);
+
         $expected = DailyReport::whereDate('report_date', '>=', today()->startOfWeek())->count();
 
-        $this->assertLessThan(DailyReport::count(), $expected, 'The demo history must span more than one week.');
+        $this->assertLessThan(DailyReport::count(), $expected);
 
         $this->actingAs(User::where('email', AccountSeeder::MANAGER_EMAIL)->firstOrFail())
             ->get(route('dashboard'))

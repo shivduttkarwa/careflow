@@ -18,7 +18,8 @@ use Illuminate\Support\Facades\DB;
 
 class DemoCareSeeder extends Seeder
 {
-    private const DAYS_OF_HISTORY = 28;
+    // Each day makes one record per shift per participant, so this multiplies fast.
+    private const DAYS_OF_HISTORY = 3;
 
     private const SHIFT_HOURS = 8;
 
@@ -196,6 +197,9 @@ class DemoCareSeeder extends Seeder
         $firstDay = today()->subDays(self::DAYS_OF_HISTORY - 1);
         $rotation = $rotationOffset;
 
+        $lastCompleted = null;
+        $recordedSeizure = false;
+
         for ($day = 0; $day < self::DAYS_OF_HISTORY; $day++) {
             $date = $firstDay->addDays($day);
 
@@ -219,11 +223,20 @@ class DemoCareSeeder extends Seeder
 
                 $shift = $this->createShift($participant, $worker, $startsAt, $endsAt, 'completed');
                 $report = $this->createReport($participant, $worker, $shift, $date, $pattern['type']);
+                $lastCompleted = [$worker, $report, $startsAt, $endsAt];
 
                 if ($epilepsy && $this->narrative->chance(16)) {
                     $this->createSeizureEvents($participant, $worker, $report, $startsAt, $endsAt);
+                    $recordedSeizure = true;
                 }
             }
+        }
+
+        // A short history window can draw no events at all, which would leave the
+        // seizure chart with nothing to show.
+        if ($epilepsy && ! $recordedSeizure && $lastCompleted !== null) {
+            [$worker, $report, $startsAt, $endsAt] = $lastCompleted;
+            $this->createSeizureEvents($participant, $worker, $report, $startsAt, $endsAt);
         }
     }
 
